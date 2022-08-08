@@ -1,6 +1,5 @@
 from encoder.params_model import model_embedding_size as speaker_embedding_size
 from utils.argutils import print_args
-from utils.modelutils import check_model_paths
 from synthesizer.inference import Synthesizer
 from encoder import inference as encoder
 from vocoder import inference as vocoder
@@ -11,7 +10,7 @@ import librosa
 import argparse
 import torch
 import sys
-from audioread.exceptions import NoBackendError
+
 
 if __name__ == '__main__':
     ## Info & args
@@ -32,29 +31,20 @@ if __name__ == '__main__':
         "overhead but allows to save some GPU memory for lower-end GPUs.")
     parser.add_argument("--no_sound", action="store_true", help=\
         "If True, audio won't be played.")
-    parser.add_argument("--seed", type=int, default=None, help=\
-        "Optional random number seed value to make toolbox deterministic.")
-    parser.add_argument("--no_mp3_support", action="store_true", help=\
-        "If True, disallows loading mp3 files to prevent audioread errors when ffmpeg is not installed.")
+    parser.add_argument("--cpu", help="Use CPU.", action="store_true")
     args = parser.parse_args()
     print_args(args, parser)
     if not args.no_sound:
         import sounddevice as sd
-
-    if not args.no_mp3_support:
-        try:
-            librosa.load("samples/1320_00000.mp3")
-        except NoBackendError:
-            print("Librosa will be unable to open mp3 files if additional software is not installed.\n"
-                  "Please install ffmpeg or add the '--no_mp3_support' option to proceed without support for mp3 files.")
-            exit(-1)
         
+    
+    ## Print some environment information (for debugging purposes)
     print("Running a test of your configuration...\n")
-        
-    if torch.cuda.is_available():
+    if args.cpu:
+        print("Using CPU for inference.")
+    elif torch.cuda.is_available():
         device_id = torch.cuda.current_device()
         gpu_properties = torch.cuda.get_device_properties(device_id)
-        ## Print some environment information (for debugging purposes)
         print("Found %d GPUs available. Using GPU %d (%s) of compute capability %d.%d with "
             "%.1fGb total memory.\n" % 
             (torch.cuda.device_count(),
@@ -64,16 +54,17 @@ if __name__ == '__main__':
             gpu_properties.minor,
             gpu_properties.total_memory / 1e9))
     else:
-        print("Using CPU for inference.\n")
+        print("Your PyTorch installation is not configured. If you have a GPU ready "
+              "for deep learning, ensure that the drivers are properly installed, and that your "
+              "CUDA version matches your PyTorch installation.", file=sys.stderr)
+        print("\nIf you're trying to use a cpu, please use the option --cpu.", file=sys.stderr)
+        quit(-1)
     
-    ## Remind the user to download pretrained models if needed
-    check_model_paths(encoder_path=args.enc_model_fpath, synthesizer_path=args.syn_model_dir,
-                      vocoder_path=args.voc_model_fpath)
     
     ## Load the models one by one.
     print("Preparing the encoder, the synthesizer and the vocoder...")
     encoder.load_model(args.enc_model_fpath)
-    synthesizer = Synthesizer(args.syn_model_dir.joinpath("taco_pretrained"), low_mem=args.low_mem, seed=args.seed)
+    synthesizer = Synthesizer(args.syn_model_dir.joinpath("taco_pretrained"), low_mem=args.low_mem)
     vocoder.load_model(args.voc_model_fpath)
     
     
@@ -134,10 +125,8 @@ if __name__ == '__main__':
             message = "Reference voice: enter an audio filepath of a voice to be cloned (mp3, " \
                       "wav, m4a, flac, ...):\n"
             in_fpath = Path(input(message).replace("\"", "").replace("\'", ""))
-
-            if in_fpath.suffix.lower() == ".mp3" and args.no_mp3_support:
-                print("Can't Use mp3 files please try again:")
-                continue
+            
+            
             ## Computing the embedding
             # First, we load the wav using the function that the speaker encoder provides. This is 
             # important: there is preprocessing that must be applied.
@@ -172,12 +161,6 @@ if __name__ == '__main__':
             
             ## Generating the waveform
             print("Synthesizing the waveform:")
-
-            # If seed is specified, reset torch seed and reload vocoder
-            if args.seed is not None:
-                torch.manual_seed(args.seed)
-                vocoder.load_model(args.voc_model_fpath)
-
             # Synthesizing the waveform is fairly straightforward. Remember that the longer the
             # spectrogram, the more time-efficient the vocoder.
             generated_wav = vocoder.infer_waveform(spec)
@@ -187,20 +170,11 @@ if __name__ == '__main__':
             # There's a bug with sounddevice that makes the audio cut one second earlier, so we
             # pad it.
             generated_wav = np.pad(generated_wav, (0, synthesizer.sample_rate), mode="constant")
-
-            # Trim excess silences to compensate for gaps in spectrograms (issue #53)
-            generated_wav = encoder.preprocess_wav(generated_wav)
             
             # Play the audio (non-blocking)
             if not args.no_sound:
-                try:
-                    sd.stop()
-                    sd.play(generated_wav, synthesizer.sample_rate)
-                except sd.PortAudioError as e:
-                    print("\nCaught exception: %s" % repr(e))
-                    print("Continuing without audio playback. Suppress this message with the \"--no_sound\" flag.\n")
-                except:
-                    raise
+                sd.stop()
+                sd.play(generated_wav, synthesizer.sample_rate)
                 
             # Save it on the disk
             filename = "demo_output_%02d.wav" % num_generated

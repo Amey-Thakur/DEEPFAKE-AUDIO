@@ -8,9 +8,7 @@ from toolbox.utterance import Utterance
 import numpy as np
 import traceback
 import sys
-import torch
-import librosa
-from audioread.exceptions import NoBackendError
+
 
 # Use this directory structure for your datasets, or modify it to fit your needs
 recognized_datasets = [
@@ -36,19 +34,8 @@ recognized_datasets = [
     "VCTK-Corpus/wav48",
 ]
 
-#Maximum of generated wavs to keep on memory
-MAX_WAVES = 15
-
 class Toolbox:
-    def __init__(self, datasets_root, enc_models_dir, syn_models_dir, voc_models_dir, low_mem, seed, no_mp3_support):
-        if not no_mp3_support:
-            try:
-                librosa.load("samples/6829_00000.mp3")
-            except NoBackendError:
-                print("Librosa will be unable to open mp3 files if additional software is not installed.\n"
-                  "Please install ffmpeg or add the '--no_mp3_support' option to proceed without support for mp3 files.")
-                exit(-1)
-        self.no_mp3_support = no_mp3_support
+    def __init__(self, datasets_root, enc_models_dir, syn_models_dir, voc_models_dir, low_mem):
         sys.excepthook = self.excepthook
         self.datasets_root = datasets_root
         self.low_mem = low_mem
@@ -56,24 +43,13 @@ class Toolbox:
         self.current_generated = (None, None, None, None) # speaker_name, spec, breaks, wav
         
         self.synthesizer = None # type: Synthesizer
-        self.current_wav = None
-        self.waves_list = []
-        self.waves_count = 0
-        self.waves_namelist = []
-
-        # Check for webrtcvad (enables removal of silences in vocoder output)
-        try:
-            import webrtcvad
-            self.trim_silences = True
-        except:
-            self.trim_silences = False
-
+        
         # Initialize the events and the interface
         self.ui = UI()
-        self.reset_ui(enc_models_dir, syn_models_dir, voc_models_dir, seed)
+        self.reset_ui(enc_models_dir, syn_models_dir, voc_models_dir)
         self.setup_events()
         self.ui.start()
-
+        
     def excepthook(self, exc_type, exc_value, exc_tb):
         traceback.print_exception(exc_type, exc_value, exc_tb)
         self.ui.log("Exception: %s" % exc_value)
@@ -106,40 +82,19 @@ class Toolbox:
         self.ui.play_button.clicked.connect(func)
         self.ui.stop_button.clicked.connect(self.ui.stop)
         self.ui.record_button.clicked.connect(self.record)
-
-        #Audio
-        self.ui.setup_audio_devices(Synthesizer.sample_rate)
-
-        #Wav playback & save
-        func = lambda: self.replay_last_wav()
-        self.ui.replay_wav_button.clicked.connect(func)
-        func = lambda: self.export_current_wave()
-        self.ui.export_wav_button.clicked.connect(func)
-        self.ui.waves_cb.currentIndexChanged.connect(self.set_current_wav)
-
+        
         # Generation
         func = lambda: self.synthesize() or self.vocode()
         self.ui.generate_button.clicked.connect(func)
         self.ui.synthesize_button.clicked.connect(self.synthesize)
         self.ui.vocode_button.clicked.connect(self.vocode)
-        self.ui.random_seed_checkbox.clicked.connect(self.update_seed_textbox)
-
+        
         # UMAP legend
         self.ui.clear_button.clicked.connect(self.clear_utterances)
 
-    def set_current_wav(self, index):
-        self.current_wav = self.waves_list[index]
-
-    def export_current_wave(self):
-        self.ui.save_audio_file(self.current_wav, Synthesizer.sample_rate)
-
-    def replay_last_wav(self):
-        self.ui.play(self.current_wav, Synthesizer.sample_rate)
-
-    def reset_ui(self, encoder_models_dir, synthesizer_models_dir, vocoder_models_dir, seed):
+    def reset_ui(self, encoder_models_dir, synthesizer_models_dir, vocoder_models_dir):
         self.ui.populate_browser(self.datasets_root, recognized_datasets, 0, True)
         self.ui.populate_models(encoder_models_dir, synthesizer_models_dir, vocoder_models_dir)
-        self.ui.populate_gen_options(seed, self.trim_silences)
         
     def load_from_browser(self, fpath=None):
         if fpath is None:
@@ -158,11 +113,7 @@ class Toolbox:
         else:
             name = fpath.name
             speaker_name = fpath.parent.name
-
-        if fpath.suffix.lower() == ".mp3" and self.no_mp3_support:
-                self.ui.log("Error: No mp3 file argument was passed but an mp3 file was used")
-                return
-
+        
         # Get the wav from the disk. We take the wav with the vocoder/synthesizer format for
         # playback, so as to have a fair comparison with the generated audio
         wav = Synthesizer.load_preprocess_wav(fpath)
@@ -215,13 +166,6 @@ class Toolbox:
             self.synthesizer = Synthesizer(checkpoints_dir, low_mem=self.low_mem)
         if not self.synthesizer.is_loaded():
             self.ui.log("Loading the synthesizer %s" % self.synthesizer.checkpoint_fpath)
-
-        # Update the synthesizer random seed
-        if self.ui.random_seed_checkbox.isChecked():
-            seed = self.synthesizer.set_seed(int(self.ui.seed_textbox.text()))
-            self.ui.populate_gen_options(seed, self.trim_silences)
-        else:
-            seed = self.synthesizer.set_seed(None)
         
         texts = self.ui.text_prompt.toPlainText().split("\n")
         embed = self.ui.selected_utterance.embed
@@ -238,20 +182,9 @@ class Toolbox:
         speaker_name, spec, breaks, _ = self.current_generated
         assert spec is not None
 
-        # Initialize the vocoder model and make it determinstic, if user provides a seed
-        if self.ui.random_seed_checkbox.isChecked():
-            seed = self.synthesizer.set_seed(int(self.ui.seed_textbox.text()))
-            self.ui.populate_gen_options(seed, self.trim_silences)
-        else:
-            seed = None
-
-        if seed is not None:
-            torch.manual_seed(seed)
-
         # Synthesize the waveform
-        if not vocoder.is_loaded() or seed is not None:
+        if not vocoder.is_loaded():
             self.init_vocoder()
-
         def vocoder_progress(i, seq_len, b_size, gen_rate):
             real_time_factor = (gen_rate / Synthesizer.sample_rate) * 1000
             line = "Waveform generation: %d/%d (batch size: %d, rate: %.1fkHz - %.2fx real time)" \
@@ -274,37 +207,9 @@ class Toolbox:
         breaks = [np.zeros(int(0.15 * Synthesizer.sample_rate))] * len(breaks)
         wav = np.concatenate([i for w, b in zip(wavs, breaks) for i in (w, b)])
 
-        # Trim excessive silences
-        if self.ui.trim_silences_checkbox.isChecked():
-            wav = encoder.preprocess_wav(wav)
-
         # Play it
         wav = wav / np.abs(wav).max() * 0.97
         self.ui.play(wav, Synthesizer.sample_rate)
-
-        # Name it (history displayed in combobox)
-        # TODO better naming for the combobox items?
-        wav_name = str(self.waves_count + 1)
-
-        #Update waves combobox
-        self.waves_count += 1
-        if self.waves_count > MAX_WAVES:
-          self.waves_list.pop()
-          self.waves_namelist.pop()
-        self.waves_list.insert(0, wav)
-        self.waves_namelist.insert(0, wav_name)
-
-        self.ui.waves_cb.disconnect()
-        self.ui.waves_cb_model.setStringList(self.waves_namelist)
-        self.ui.waves_cb.setCurrentIndex(0)
-        self.ui.waves_cb.currentIndexChanged.connect(self.set_current_wav)
-
-        # Update current wav
-        self.set_current_wav(0)
-        
-        #Enable replay and save buttons:
-        self.ui.replay_wav_button.setDisabled(False)
-        self.ui.export_wav_button.setDisabled(False)
 
         # Compute the embedding
         # TODO: this is problematic with different sampling rates, gotta fix it
@@ -344,6 +249,3 @@ class Toolbox:
         vocoder.load_model(model_fpath)
         self.ui.log("Done (%dms)." % int(1000 * (timer() - start)), "append")
         self.ui.set_loading(0)
-
-    def update_seed_textbox(self):
-       self.ui.update_seed_textbox() 

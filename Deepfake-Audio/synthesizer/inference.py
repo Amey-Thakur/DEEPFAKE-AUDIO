@@ -2,7 +2,6 @@ from synthesizer.tacotron2 import Tacotron2
 from synthesizer.hparams import hparams
 from multiprocess.pool import Pool  # You're free to use either one
 #from multiprocessing import Pool   # 
-from multiprocess.context import SpawnContext
 from synthesizer import audio
 from pathlib import Path
 from typing import Union, List
@@ -16,7 +15,7 @@ class Synthesizer:
     sample_rate = hparams.sample_rate
     hparams = hparams
     
-    def __init__(self, checkpoints_dir: Path, verbose=True, low_mem=False, seed=None):
+    def __init__(self, checkpoints_dir: Path, verbose=True, low_mem=False):
         """
         Creates a synthesizer ready for inference. The actual model isn't loaded in memory until
         needed or until load() is called.
@@ -27,14 +26,10 @@ class Synthesizer:
         :param low_mem: if True, the model will be loaded in a separate process and its resources 
         will be released after each usage. Adds a large overhead, only recommended if your GPU 
         memory is low (<= 2gb)
-        :param seed: optional integer for seeding random number generators when initializing model
-        This makes the synthesizer output consistent for a given embedding and input text.
-        However, it requires the model to be reloaded whenever a text is synthesized.
         """
         self.verbose = verbose
         self._low_mem = low_mem
-        self._seed = seed
-
+        
         # Prepare the model
         self._model = None  # type: Tacotron2
         checkpoint_state = tf.train.get_checkpoint_state(checkpoints_dir)
@@ -45,19 +40,7 @@ class Synthesizer:
             model_name = checkpoints_dir.parent.name.replace("logs-", "")
             step = int(self.checkpoint_fpath[self.checkpoint_fpath.rfind('-') + 1:])
             print("Found synthesizer \"%s\" trained to step %d" % (model_name, step))
-
-    def set_seed(self, new_seed):
-        """
-        Updates the seed that initializes random number generators associated with Tacotron2.
-        Returns the new seed state as confirmation.
-        """
-        try:
-            self._seed = int(new_seed)
-        except:
-            self._seed = None
-
-        return self._seed
-
+     
     def is_loaded(self):
         """
         Whether the model is loaded in GPU memory.
@@ -72,7 +55,7 @@ class Synthesizer:
         if self._low_mem:
             raise Exception("Cannot load the synthesizer permanently in low mem mode")
         tf.compat.v1.reset_default_graph()
-        self._model = Tacotron2(self.checkpoint_fpath, hparams, seed=self._seed)
+        self._model = Tacotron2(self.checkpoint_fpath, hparams)
             
     def synthesize_spectrograms(self, texts: List[str],
                                 embeddings: Union[np.ndarray, List[np.ndarray]],
@@ -90,24 +73,23 @@ class Synthesizer:
         """
         if not self._low_mem:
             # Usual inference mode: load the model on the first request and keep it loaded.
-            # Reload it every time for deterministic operation if seed specified.
-            if not self.is_loaded() or self._seed is not None:
+            if not self.is_loaded():
                 self.load()
             specs, alignments = self._model.my_synthesize(embeddings, texts)
         else:
             # Low memory inference mode: load the model upon every request. The model has to be 
             # loaded in a separate process to be able to release GPU memory (a simple workaround 
             # to tensorflow's intricacies)
-            specs, alignments = Pool(1, context=SpawnContext()).starmap(Synthesizer._one_shot_synthesize_spectrograms,
-                                                [(self.checkpoint_fpath, embeddings, texts, self._seed)])[0]
+            specs, alignments = Pool(1).starmap(Synthesizer._one_shot_synthesize_spectrograms, 
+                                                [(self.checkpoint_fpath, embeddings, texts)])[0]
     
         return (specs, alignments) if return_alignments else specs
 
     @staticmethod
-    def _one_shot_synthesize_spectrograms(checkpoint_fpath, embeddings, texts, seed):
+    def _one_shot_synthesize_spectrograms(checkpoint_fpath, embeddings, texts):
         # Load the model and forward the inputs
         tf.compat.v1.reset_default_graph()
-        model = Tacotron2(checkpoint_fpath, hparams, seed=seed)
+        model = Tacotron2(checkpoint_fpath, hparams)
         specs, alignments = model.my_synthesize(embeddings, texts)
         
         # Detach the outputs (not doing so will cause the process to hang)
