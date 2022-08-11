@@ -5,6 +5,12 @@
  
  - [Kaggle](https://www.kaggle.com/ameythakur20/deepfake-audio)
 
+#
+
+This project is an implementation of Transfer Learning from Speaker Verification to Multispeaker Text-To-Speech Synthesis (SV2TTS) with a vocoder that works in real-time. 
+
+SV2TTS is a three-stage deep learning framework that allows to create a numerical representation of a voice from a few seconds of audio, and to use it to condition a text-to-speech model trained to generate new voices.
+
 ---
 
 <p align="center"> <b> 👉🏻 Created to Learn the working of Deepfake-Audio 👈🏻 <b> </p>
