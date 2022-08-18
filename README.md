@@ -6,6 +6,8 @@
  - [Kaggle](https://www.kaggle.com/ameythakur20/deepfake-audio)
  
  - [Model](https://drive.google.com/uc?id=1n1sPXvT34yXFLT47QZA6FIRGrwMeSsZc)
+ 
+ - [Project Demo](https://youtu.be/i3wnBcbHDbs)
 
 #
 
