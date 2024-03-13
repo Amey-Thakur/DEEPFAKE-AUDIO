@@ -1,4 +1,4 @@
-# Deepfake-Audio
+# DEEPFAKE-AUDIO
 
  👉🏻 An audio deepfake is when a “cloned” voice that is potentially indistinguishable from the real person’s is used to produce synthetic audio.
 
@@ -22,4 +22,4 @@ SV2TTS is a three-stage deep learning framework that allows to create a numerica
  
 <p align="center"> <b> 👷 Project Authors: Amey Thakur and Mega Satish <b> </p>
  
-<p align="center"><a href='https://github.com/Amey-Thakur/ENGINEERING', style='color: greenyellow;'> ✌🏻 Back To Engineering ✌🏻</p>
+<p align="center"><a href='https://github.com/Amey-Thakur/COMPUTER-ENGINEERING', style='color: greenyellow;'> ✌🏻 Back To Engineering ✌🏻</p>
