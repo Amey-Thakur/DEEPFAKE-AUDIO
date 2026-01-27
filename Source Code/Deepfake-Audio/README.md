@@ -31,7 +31,7 @@ SV2TTS is a three-stage deep learning framework that allows to create a numerica
 
 
 ## Setup
-Note: setup up this project is a lot of work. Somebody took the time to make [a better guide](https://poorlydocumented.com/2019/11/installing-corentinjs-real-time-voice-cloning-project-on-windows-10-from-scratch/) on how to install everything. I recommend using it. 
+Note: setting up this project is a lot of work. Somebody took the time to make [a better guide](https://poorlydocumented.com/2019/11/installing-corentinjs-real-time-voice-cloning-project-on-windows-10-from-scratch/) on how to install everything. I recommend using it. 
 
 ### Requirements
 You will need the following whether you plan to use the toolbox only or to retrain the models.
