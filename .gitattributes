@@ -28,3 +28,4 @@
 
 # Academic/Scholarly classification
 *.md linguist-documentation
+*.ipynb linguist-vendored
