@@ -24,3 +24,23 @@ dist/
 .DS_Store
 Thumbs.db
 Desktop.ini
+
+# Generated Files
+*.aux
+*.log
+*.out
+*.synctex.gz
+*.suo
+*.pickle
+*.npy
+*.blg
+*.bbl
+*.bcf
+*.toc
+*.wav
+*.sh
+
+# Checkpoints
+Source Code/Deepfake-Audio/encoder/saved_models/*
+Source Code/Deepfake-Audio/synthesizer/saved_models/*
+Source Code/Deepfake-Audio/vocoder/saved_models/*
