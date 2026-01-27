@@ -1,24 +1,52 @@
-from synthesizer.utils.symbols import symbols
-from synthesizer.utils.text import sequence_to_text
-from synthesizer.hparams import hparams_debug_string
+"""
+Deepfake Audio - Synthesizer Training
+-------------------------------------
+Main training loop for the Tacotron 2 synthesizer model.
+Handles logging, checkpointing, evaluation, and tensorboard monitoring.
+
+Authors:
+    - Amey Thakur (https://github.com/Amey-Thakur)
+    - Mega Satish (https://github.com/msatmod)
+
+Repository:
+    - https://github.com/Amey-Thakur/DEEPFAKE-AUDIO
+
+Release Date:
+    - February 06, 2021
+
+License:
+    - MIT License
+"""
+
+import os
+import time
+import traceback
+from datetime import datetime
+from typing import Any, List, Optional, Tuple, Dict
+
+import numpy as np
+import tensorflow as tf
+from tqdm import tqdm
+
+from synthesizer import audio, infolog
 from synthesizer.feeder import Feeder
+from synthesizer.hparams import hparams_debug_string
 from synthesizer.models import create_model
 from synthesizer.utils import ValueWindow, plot
-from synthesizer import infolog, audio
-from datetime import datetime
-from tqdm import tqdm
-import tensorflow as tf
-import numpy as np
-import traceback
-import time
-import os
+from synthesizer.utils.symbols import symbols
+from synthesizer.utils.text import sequence_to_text
 
 log = infolog.log
 
 
 def add_embedding_stats(summary_writer, embedding_names, paths_to_meta, checkpoint_path):
+    """
+    Adds tensorboard projector statistics for embeddings.
+    Allows for visualization of the learned character/phoneme embeddings.
+    """
     # Create tensorboard projector
-    config = tf.contrib.tensorboard.plugins.projector.ProjectorConfig()
+    from tensorboard.plugins import projector
+    config = projector.ProjectorConfig()
     config.model_checkpoint_path = checkpoint_path
     
     for embedding_name, path_to_meta in zip(embedding_names, paths_to_meta):
@@ -29,10 +57,14 @@ def add_embedding_stats(summary_writer, embedding_names, paths_to_meta, checkpoi
         embedding.metadata_path = path_to_meta
     
     # Project the embeddings to space dimensions for visualization
-    tf.contrib.tensorboard.plugins.projector.visualize_embeddings(summary_writer, config)
+    projector.visualize_embeddings(summary_writer, config)
 
 
 def add_train_stats(model, hparams):
+    """
+    Logs training statistics to TensorBoard.
+    Includes loss components, learning rate, and gradient norms.
+    """
     with tf.compat.v1.variable_scope("stats") as scope:
         for i in range(hparams.tacotron_num_gpus):
             tf.compat.v1.summary.histogram("mel_outputs %d" % i, model.tower_mel_outputs[i])
@@ -62,6 +94,10 @@ def add_train_stats(model, hparams):
 
 def add_eval_stats(summary_writer, step, linear_loss, before_loss, after_loss, stop_token_loss,
                    loss):
+    """
+    Logs evaluation statistics to TensorBoard.
+    Includes validation losses.
+    """
     values = [
         tf.compat.v1.Summary.Value(tag="Tacotron_eval_model/eval_stats/eval_before_loss",
                                    simple_value=before_loss),
@@ -83,6 +119,10 @@ def time_string():
 
 
 def model_train_mode(args, feeder, hparams, global_step):
+    """
+    Initializes the model in training mode.
+    Sets up inputs, loss functions, and the optimizer.
+    """
     with tf.compat.v1.variable_scope("Tacotron_model", reuse=tf.compat.v1.AUTO_REUSE) as scope:
         model = create_model("Tacotron", hparams)
         model.initialize(feeder.inputs, feeder.input_lengths, feeder.speaker_embeddings, 
@@ -96,6 +136,10 @@ def model_train_mode(args, feeder, hparams, global_step):
 
 
 def model_test_mode(args, feeder, hparams, global_step):
+    """
+    Initializes the model in evaluation (test) mode.
+    Used for validating model performance on unseen data.
+    """
     with tf.compat.v1.variable_scope("Tacotron_model", reuse=tf.compat.v1.AUTO_REUSE) as scope:
         model = create_model("Tacotron", hparams)
         model.initialize(feeder.eval_inputs, feeder.eval_input_lengths, 
@@ -108,6 +152,13 @@ def model_test_mode(args, feeder, hparams, global_step):
 
 
 def train(log_dir, args, hparams):
+    """
+    Orchestrates the training process:
+    1. Prepares directories and logging.
+    2. Initializes data feeder and models.
+    3. Runs the training loop, updating weights and saving checkpoints.
+    4. Periodically runs evaluation and generates plots.
+    """
     save_dir = os.path.join(log_dir, "taco_pretrained")
     plot_dir = os.path.join(log_dir, "plots")
     wav_dir = os.path.join(log_dir, "wavs")

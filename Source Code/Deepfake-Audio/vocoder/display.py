@@ -1,10 +1,31 @@
+"""
+Deepfake Audio - Visualizations
+-------------------------------
+Utilities for tracking training progress and visualization.
+Includes console progress bars, status updates, and plotting of spectrograms/attention.
+
+Authors:
+    - Amey Thakur (https://github.com/Amey-Thakur)
+    - Mega Satish (https://github.com/msatmod)
+
+Repository:
+    - https://github.com/Amey-Thakur/DEEPFAKE-AUDIO
+
+Release Date:
+    - February 06, 2021
+
+License:
+    - MIT License
+"""
+
 import matplotlib.pyplot as plt
 import time
 import numpy as np
 import sys
+from typing import List, Tuple, Any
 
-
-def progbar(i, n, size=16):
+def progbar(i: int, n: int, size: int = 16) -> str:
+    """Creates a text-based progress bar."""
     done = (i * size) // n
     bar = ''
     for i in range(size):
@@ -12,7 +33,8 @@ def progbar(i, n, size=16):
     return bar
 
 
-def stream(message) :
+def stream(message: str) -> None:
+    """Prints a message to the console, overwriting the current line."""
     try:
         sys.stdout.write("\r{%s}" % message)
     except:
@@ -21,8 +43,11 @@ def stream(message) :
         sys.stdout.write("\r{%s}" % message)
 
 
-def simple_table(item_tuples) :
-
+def simple_table(item_tuples: List[Tuple[Any, Any]]) -> None:
+    """
+    Prints a simple table of items to the console.
+    Useful for displaying hyperparameters or configuration settings.
+    """
     border_pattern = '+---------------------------------------'
     whitespace = '                                            '
 
@@ -72,7 +97,8 @@ def simple_table(item_tuples) :
     print(' ')
 
 
-def time_since(started) :
+def time_since(started: float) -> str:
+    """Returns a string representation of the time elapsed since 'started'."""
     elapsed = time.time() - started
     m = int(elapsed // 60)
     s = int(elapsed % 60)
@@ -84,14 +110,16 @@ def time_since(started) :
         return f'{m}m {s}s'
 
 
-def save_attention(attn, path) :
+def save_attention(attn: np.ndarray, path: str) -> None:
+    """Saves an attention matrix as an image."""
     fig = plt.figure(figsize=(12, 6))
     plt.imshow(attn.T, interpolation='nearest', aspect='auto')
     fig.savefig(f'{path}.png', bbox_inches='tight')
     plt.close(fig)
 
 
-def save_spectrogram(M, path, length=None) :
+def save_spectrogram(M: np.ndarray, path: str, length: int = None) -> None:
+    """Saves a spectrogram as an image."""
     M = np.flip(M, axis=0)
     if length : M = M[:, :length]
     fig = plt.figure(figsize=(12, 6))
@@ -100,7 +128,8 @@ def save_spectrogram(M, path, length=None) :
     plt.close(fig)
 
 
-def plot(array) : 
+def plot(array: np.ndarray) -> None: 
+    """Plots a 1D array."""
     fig = plt.figure(figsize=(30, 5))
     ax = fig.add_subplot(111)
     ax.xaxis.label.set_color('grey')
@@ -112,7 +141,8 @@ def plot(array) :
     plt.plot(array)
 
 
-def plot_spec(M) :
+def plot_spec(M: np.ndarray) -> None:
+    """Display a spectrogram."""
     M = np.flip(M, axis=0)
     plt.figure(figsize=(18,4))
     plt.imshow(M, interpolation='nearest', aspect='auto')

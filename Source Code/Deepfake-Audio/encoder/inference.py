@@ -1,86 +1,125 @@
-from encoder.params_data import *
-from encoder.model import SpeakerEncoder
-from encoder.audio import preprocess_wav   # We want to expose this function from here
-from matplotlib import cm
-from encoder import audio
+"""
+Deepfake Audio - Encoder Inference Interface
+--------------------------------------------
+This module provides a high-level programmable interface for the Speaker Encoder.
+It manages the pre-trained model state and provides functions to compute speaker
+embeddings from audio waveforms or file paths.
+
+This component is the "frontend" of the encoder package, used by the Synthesizer
+and the CLI demo to access the speaker recognition capabilities.
+
+Authors:
+    - Amey Thakur (https://github.com/Amey-Thakur)
+    - Mega Satish (https://github.com/msatmod)
+
+Repository:
+    - https://github.com/Amey-Thakur/DEEPFAKE-AUDIO
+
+Release Date:
+    - February 06, 2021
+
+License:
+    - MIT License
+"""
+
 from pathlib import Path
+from typing import Optional, Union, List, Tuple
+
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+from matplotlib import cm
 
-_model = None # type: SpeakerEncoder
-_device = None # type: torch.device
+# Internal Modules
+from encoder import audio
+from encoder.model import SpeakerEncoder
+from encoder.params_data import (
+    sampling_rate, mel_window_step, partials_n_frames
+)
+
+# Global State for the loaded model
+_model: Optional[SpeakerEncoder] = None
+_device: Optional[torch.device] = None
 
 
-def load_model(weights_fpath: Path, device=None):
+def load_model(weights_fpath: Path, device: Optional[Union[str, torch.device]] = None) -> None:
     """
-    Loads the model in memory. If this function is not explicitely called, it will be run on the 
-    first call to embed_frames() with the default weights file.
+    Loads the Speaker Encoder model into memory.
     
-    :param weights_fpath: the path to saved model weights.
-    :param device: either a torch device or the name of a torch device (e.g. "cpu", "cuda"). The 
-    model will be loaded and will run on this device. Outputs will however always be on the cpu. 
-    If None, will default to your GPU if it"s available, otherwise your CPU.
+    If this function is not explicitly called, it will be invoked lazily on the
+    first call to `embed_frames_batch` with the default weights file (if configured).
+    
+    Args:
+        weights_fpath: Path to the .pt model checkpoint.
+        device: 'cpu' or 'cuda'. If None, automatically selects GPU if available.
     """
-    # TODO: I think the slow loading of the encoder might have something to do with the device it
-    #   was saved on. Worth investigating.
     global _model, _device
+    
     if device is None:
         _device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     elif isinstance(device, str):
         _device = torch.device(device)
+    else:
+        _device = device
+        
     _model = SpeakerEncoder(_device, torch.device("cpu"))
-    checkpoint = torch.load(weights_fpath, _device)
+    checkpoint = torch.load(weights_fpath, map_location=_device)
     _model.load_state_dict(checkpoint["model_state"])
     _model.eval()
-    print("Loaded encoder \"%s\" trained to step %d" % (weights_fpath.name, checkpoint["step"]))
     
-    
-def is_loaded():
+    print(f"Loaded encoder \"{weights_fpath.name}\" trained to step {checkpoint.get('step', 'unknown')}")
+
+
+def is_loaded() -> bool:
+    """Checks if the encoder model is currently loaded."""
     return _model is not None
 
 
-def embed_frames_batch(frames_batch):
+def embed_frames_batch(frames_batch: np.ndarray) -> np.ndarray:
     """
-    Computes embeddings for a batch of mel spectrogram.
+    Computes embeddings for a batch of mel spectrograms.
     
-    :param frames_batch: a batch mel of spectrogram as a numpy array of float32 of shape 
-    (batch_size, n_frames, n_channels)
-    :return: the embeddings as a numpy array of float32 of shape (batch_size, model_embedding_size)
+    Args:
+        frames_batch: Batch of mel spectrograms. Shape: (batch_size, n_frames, n_channels).
+                      Dtype should be float32.
+                      
+    Returns:
+        np.ndarray: Batch of embeddings. Shape: (batch_size, model_embedding_size).
+        
+    Raises:
+        RuntimeError: If the model has not been loaded.
     """
     if _model is None:
-        raise Exception("Model was not loaded. Call load_model() before inference.")
+        raise RuntimeError("Model was not loaded. Call load_model() before inference.")
     
     frames = torch.from_numpy(frames_batch).to(_device)
-    embed = _model.forward(frames).detach().cpu().numpy()
+    
+    with torch.no_grad():
+        embed = _model.forward(frames).detach().cpu().numpy()
+        
     return embed
 
 
-def compute_partial_slices(n_samples, partial_utterance_n_frames=partials_n_frames,
-                           min_pad_coverage=0.75, overlap=0.5):
+def compute_partial_slices(n_samples: int, 
+                           partial_utterance_n_frames: int = partials_n_frames,
+                           min_pad_coverage: float = 0.75, 
+                           overlap: float = 0.5) -> Tuple[List[slice], List[slice]]:
     """
-    Computes where to split an utterance waveform and its corresponding mel spectrogram to obtain 
-    partial utterances of <partial_utterance_n_frames> each. Both the waveform and the mel 
-    spectrogram slices are returned, so as to make each partial utterance waveform correspond to 
-    its spectrogram. This function assumes that the mel spectrogram parameters used are those 
-    defined in params_data.py.
+    Calculates segmentation slices to split an utterance into overlapping partials.
     
-    The returned ranges may be indexing further than the length of the waveform. It is 
-    recommended that you pad the waveform with zeros up to wave_slices[-1].stop.
+    The encoder is trained on partial utterances of a fixed duration (e.g., 1.6s). 
+    To embed an arbitrary-length utterance, we split it into partials, embed each, 
+    and average the results.
     
-    :param n_samples: the number of samples in the waveform
-    :param partial_utterance_n_frames: the number of mel spectrogram frames in each partial 
-    utterance
-    :param min_pad_coverage: when reaching the last partial utterance, it may or may not have 
-    enough frames. If at least <min_pad_coverage> of <partial_utterance_n_frames> are present, 
-    then the last partial utterance will be considered, as if we padded the audio. Otherwise, 
-    it will be discarded, as if we trimmed the audio. If there aren't enough frames for 1 partial 
-    utterance, this parameter is ignored so that the function always returns at least 1 slice.
-    :param overlap: by how much the partial utterance should overlap. If set to 0, the partial 
-    utterances are entirely disjoint. 
-    :return: the waveform slices and mel spectrogram slices as lists of array slices. Index 
-    respectively the waveform and the mel spectrogram with these slices to obtain the partial 
-    utterances.
+    Args:
+        n_samples: Total number of samples in the waveform.
+        partial_utterance_n_frames: Number of mel frames per partial.
+        min_pad_coverage: Minimum coverage ratio required to keep the last partial if it
+                          needs padding.
+        overlap: Overlap fraction between consecutive partials (0.0 to 1.0).
+        
+    Returns:
+        Tuple of (waveform_slices, mel_slices).
     """
     assert 0 <= overlap < 1
     assert 0 < min_pad_coverage <= 1
@@ -92,42 +131,47 @@ def compute_partial_slices(n_samples, partial_utterance_n_frames=partials_n_fram
     # Compute the slices
     wav_slices, mel_slices = [], []
     steps = max(1, n_frames - partial_utterance_n_frames + frame_step + 1)
+    
     for i in range(0, steps, frame_step):
         mel_range = np.array([i, i + partial_utterance_n_frames])
         wav_range = mel_range * samples_per_frame
         mel_slices.append(slice(*mel_range))
         wav_slices.append(slice(*wav_range))
         
-    # Evaluate whether extra padding is warranted or not
-    last_wav_range = wav_slices[-1]
-    coverage = (n_samples - last_wav_range.start) / (last_wav_range.stop - last_wav_range.start)
-    if coverage < min_pad_coverage and len(mel_slices) > 1:
-        mel_slices = mel_slices[:-1]
-        wav_slices = wav_slices[:-1]
+    # Evaluate whether extra padding is warranted for the last partial
+    if wav_slices:
+        last_wav_range = wav_slices[-1]
+        coverage = (n_samples - last_wav_range.start) / (last_wav_range.stop - last_wav_range.start)
+        
+        if coverage < min_pad_coverage and len(mel_slices) > 1:
+            mel_slices = mel_slices[:-1]
+            wav_slices = wav_slices[:-1]
     
     return wav_slices, mel_slices
 
 
-def embed_utterance(wav, using_partials=True, return_partials=False, **kwargs):
+def embed_utterance(wav: np.ndarray, using_partials: bool = True, 
+                    return_partials: bool = False, **kwargs) -> Union[np.ndarray, Tuple]:
     """
-    Computes an embedding for a single utterance.
+    Computes the d-vector embedding for a single audio utterance.
     
-    # TODO: handle multiple wavs to benefit from batching on GPU
-    :param wav: a preprocessed (see audio.py) utterance waveform as a numpy array of float32
-    :param using_partials: if True, then the utterance is split in partial utterances of 
-    <partial_utterance_n_frames> frames and the utterance embedding is computed from their 
-    normalized average. If False, the utterance is instead computed from feeding the entire 
-    spectogram to the network.
-    :param return_partials: if True, the partial embeddings will also be returned along with the 
-    wav slices that correspond to the partial embeddings.
-    :param kwargs: additional arguments to compute_partial_splits()
-    :return: the embedding as a numpy array of float32 of shape (model_embedding_size,). If 
-    <return_partials> is True, the partial utterances as a numpy array of float32 of shape 
-    (n_partials, model_embedding_size) and the wav partials as a list of slices will also be 
-    returned. If <using_partials> is simultaneously set to False, both these values will be None 
-    instead.
+    Args:
+        wav: Preprocessed waveform array (float32).
+        using_partials: If True, splits the utterance into overlapping segments, embeds each,
+                        and averages the resulting vectors. This generally yields a more robust
+                        embedding for long utterances.
+        return_partials: If True, also returns the individual partial embeddings.
+        **kwargs: Arguments passed to `compute_partial_slices`.
+        
+    Returns:
+        If return_partials is False:
+            - embed (np.ndarray): The final L2-normalized d-vector.
+        If return_partials is True:
+            - embed (np.ndarray): The final d-vector.
+            - partial_embeds (np.ndarray): Array of partial embeddings.
+            - wave_slices (List[slice]): Slices corresponding to the waveform segments.
     """
-    # Process the entire utterance if not using partials
+    # Case 1: Process the entire utterance as a single batch item (no partials)
     if not using_partials:
         frames = audio.wav_to_mel_spectrogram(wav)
         embed = embed_frames_batch(frames[None, ...])[0]
@@ -135,19 +179,25 @@ def embed_utterance(wav, using_partials=True, return_partials=False, **kwargs):
             return embed, None, None
         return embed
     
-    # Compute where to split the utterance into partials and pad if necessary
+    # Case 2: Split into partials (Standard Inference Mode)
     wave_slices, mel_slices = compute_partial_slices(len(wav), **kwargs)
     max_wave_length = wave_slices[-1].stop
+    
+    # Pad waveform if necessary to cover the last slice
     if max_wave_length >= len(wav):
         wav = np.pad(wav, (0, max_wave_length - len(wav)), "constant")
     
-    # Split the utterance into partials
+    # Generate spectrogram
     frames = audio.wav_to_mel_spectrogram(wav)
+    
+    # Create batch of partial spectrograms
     frames_batch = np.array([frames[s] for s in mel_slices])
     partial_embeds = embed_frames_batch(frames_batch)
     
-    # Compute the utterance embedding from the partial embeddings
+    # Aggregate partial embeddings via averaging efficiently
     raw_embed = np.mean(partial_embeds, axis=0)
+    
+    # L2-Normalize the final embedding (critical for cosine similarity)
     embed = raw_embed / np.linalg.norm(raw_embed, 2)
     
     if return_partials:
@@ -155,23 +205,35 @@ def embed_utterance(wav, using_partials=True, return_partials=False, **kwargs):
     return embed
 
 
-def embed_speaker(wavs, **kwargs):
-    raise NotImplemented()
+def embed_speaker(wavs: List[np.ndarray], **kwargs):
+    """
+    Computes an embedding for a speaker given multiple utterances.
+    
+    Not yet implemented.
+    """
+    raise NotImplementedError()
 
 
-def plot_embedding_as_heatmap(embed, ax=None, title="", shape=None, color_range=(0, 0.30)):
+def plot_embedding_as_heatmap(embed: np.ndarray, ax=None, title: str = "", 
+                              shape: Optional[Tuple[int, int]] = None, 
+                              color_range: Tuple[float, float] = (0, 0.30)) -> None:
+    """
+    Visualizes the embedding vector as a 2D heatmap.
+    """
     if ax is None:
         ax = plt.gca()
     
     if shape is None:
         height = int(np.sqrt(len(embed)))
         shape = (height, -1)
+    
     embed = embed.reshape(shape)
     
-    cmap = cm.get_cmap()
-    mappable = ax.imshow(embed, cmap=cmap)
+    # Using default colormap or retrieving dynamically
+    mappable = ax.imshow(embed, cmap='viridis') # Explicit cmap is safer
     cbar = plt.colorbar(mappable, ax=ax, fraction=0.046, pad=0.04)
     cbar.set_clim(*color_range)
     
-    ax.set_xticks([]), ax.set_yticks([])
+    ax.set_xticks([])
+    ax.set_yticks([])
     ax.set_title(title)

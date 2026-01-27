@@ -1,10 +1,26 @@
-"""A set of wrappers useful for tacotron 2 architecture
-All notations and variable names were used in concordance with originial tensorflow implementation
+"""
+Deepfake Audio - Tacotron 2 Architecture Wrappers
+-------------------------------------------------
+A set of wrappers useful for the Tacotron 2 architecture.
+All notations and variable names are in concordance with the original Tensorflow implementation.
+
+Authors:
+    - Amey Thakur (https://github.com/Amey-Thakur)
+    - Mega Satish (https://github.com/msatmod)
+
+Repository:
+    - https://github.com/Amey-Thakur/DEEPFAKE-AUDIO
+
+Release Date:
+    - February 06, 2021
+
+License:
+    - MIT License
 """
 import collections
 import tensorflow as tf
 from synthesizer.models.attention import _compute_attention
-from tensorflow.contrib.rnn import RNNCell
+from tensorflow.compat.v1.nn.rnn_cell import RNNCell
 from tensorflow.python.framework import ops, tensor_shape
 from tensorflow.python.ops import array_ops, check_ops, rnn_cell_impl, tensor_array_ops
 from tensorflow.python.util import nest

@@ -1,7 +1,25 @@
-"""Attention file for location based attention (compatible with tensorflow attention wrapper)"""
+"""
+Deepfake Audio - Attention Mechanisms
+-------------------------------------
+Attention file for location-based attention (compatible with Tensorflow attention wrapper).
+Implements Bahdanau-style (cumulative) scoring function and Location Sensitive Attention.
+
+Authors:
+    - Amey Thakur (https://github.com/Amey-Thakur)
+    - Mega Satish (https://github.com/msatmod)
+
+Repository:
+    - https://github.com/Amey-Thakur/DEEPFAKE-AUDIO
+
+Release Date:
+    - February 06, 2021
+
+License:
+    - MIT License
+"""
 
 import tensorflow as tf
-from tensorflow.contrib.seq2seq.python.ops.attention_wrapper import BahdanauAttention
+from tensorflow_addons.seq2seq import BahdanauAttention
 from tensorflow.python.layers import core as layers_core
 from tensorflow.python.ops import array_ops, math_ops, nn_ops, variable_scope
 
@@ -62,7 +80,7 @@ def _location_sensitive_score(W_query, W_fil, W_keys):
 
 	v_a = tf.compat.v1.get_variable(
 		"attention_variable_projection", shape=[num_units], dtype=dtype,
-		initializer=tf.contrib.layers.xavier_initializer())
+		initializer=tf.keras.initializers.GlorotUniform())
 	b_a = tf.compat.v1.get_variable(
 		"attention_bias", shape=[num_units], dtype=dtype,
 		initializer=tf.zeros_initializer())

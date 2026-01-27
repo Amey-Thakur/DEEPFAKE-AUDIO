@@ -1,17 +1,43 @@
-from sklearn.model_selection import train_test_split
-from synthesizer.utils.text import text_to_sequence
-from synthesizer.infolog import log
-import tensorflow as tf
-import numpy as np
+"""
+Deepfake Audio - Feeder
+-----------------------
+Feeds batches of data into a queue on a background thread for Tacotron 2 training.
+Handles metadata loading, train-test splitting, and batch preparation.
+Implements a producer-consumer pattern using TensorFlow Coordinators and Threads
+to ensure the GPU is constantly supplied with data.
+
+Authors:
+    - Amey Thakur (https://github.com/Amey-Thakur)
+    - Mega Satish (https://github.com/msatmod)
+
+Repository:
+    - https://github.com/Amey-Thakur/DEEPFAKE-AUDIO
+
+Release Date:
+    - February 06, 2021
+
+License:
+    - MIT License
+"""
+
+import os
 import threading
 import time
-import os
+from typing import List, Tuple, Any, Dict, Optional
+
+import numpy as np
+import tensorflow as tf
+from sklearn.model_selection import train_test_split
+
+from synthesizer.infolog import log
+from synthesizer.utils.text import text_to_sequence
 
 _batches_per_group = 64
 
 class Feeder:
 	"""
-		Feeds batches of data into queue on a background thread.
+	Feeds batches of data into queue on a background thread.
+	Prioritizes efficiency by grouping examples with similar lengths.
 	"""
 
 	def __init__(self, coordinator, metadata_filename, hparams):
@@ -204,6 +230,10 @@ class Feeder:
 		return input_data, mel_target, token_target, embed_target, len(mel_target)
 
 	def _prepare_batch(self, batches, outputs_per_step):
+		"""
+		Prepares a batch of data by padding inputs and targets.
+		Ensures all sequences in the batch have the same length.
+		"""
 		assert 0 == len(batches) % self._hparams.tacotron_num_gpus
 		size_per_device = int(len(batches) / self._hparams.tacotron_num_gpus)
 		np.random.shuffle(batches)

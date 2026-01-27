@@ -1,5 +1,26 @@
+"""
+Deepfake Audio - CMU Dict
+-------------------------
+Thin wrapper around CMU Dict data for phoneme lookups.
+Provides functionality to parse the dictionary and lookup pronunciations.
+
+Authors:
+    - Amey Thakur (https://github.com/Amey-Thakur)
+    - Mega Satish (https://github.com/msatmod)
+
+Repository:
+    - https://github.com/Amey-Thakur/DEEPFAKE-AUDIO
+
+Release Date:
+    - February 06, 2021
+
+License:
+    - MIT License
+"""
+
 import re
 
+# List of valid phonemes in the ARPAbet symbol set.
 valid_symbols = [
   "AA", "AA0", "AA1", "AA2", "AE", "AE0", "AE1", "AE2", "AH", "AH0", "AH1", "AH2",
   "AO", "AO0", "AO1", "AO2", "AW", "AW0", "AW1", "AW2", "AY", "AY0", "AY1", "AY2",
@@ -40,6 +61,7 @@ _alt_re = re.compile(r"\([0-9]+\)")
 
 
 def _parse_cmudict(file):
+  """Parses the CMUDict file and returns a dictionary mapping words to valid pronunciations."""
   cmudict = {}
   for line in file:
     if len(line) and (line[0] >= "A" and line[0] <= "Z" or line[0] == "'"):
@@ -55,6 +77,7 @@ def _parse_cmudict(file):
 
 
 def _get_pronunciation(s):
+  """Validates and returns the pronunciation string if all symbols are valid."""
   parts = s.strip().split(" ")
   for part in parts:
     if part not in _valid_symbol_set:

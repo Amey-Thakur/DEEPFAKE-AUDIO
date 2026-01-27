@@ -1,13 +1,23 @@
 """
-Cleaners are transformations that run over the input text at both training and eval time.
+Deepfake Audio - Text Cleaners
+------------------------------
+Text cleaning pipelines for English and non-English text.
+Includes transliteration, number expansion, and abbreviation expansion.
+These cleaners are critical for normalizing input text before it is converted
+to phonemes or processed by the synthesizer.
 
-Cleaners can be selected by passing a comma-delimited list of cleaner names as the "cleaners"
-hyperparameter. Some cleaners are English-specific. You"ll typically want to use:
-  1. "english_cleaners" for English text
-  2. "transliteration_cleaners" for non-English text that can be transliterated to ASCII using
-     the Unidecode library (https://pypi.python.org/pypi/Unidecode)
-  3. "basic_cleaners" if you do not want to transliterate (in this case, you should also update
-     the symbols in symbols.py to match your data).
+Authors:
+    - Amey Thakur (https://github.com/Amey-Thakur)
+    - Mega Satish (https://github.com/msatmod)
+
+Repository:
+    - https://github.com/Amey-Thakur/DEEPFAKE-AUDIO
+
+Release Date:
+    - February 06, 2021
+
+License:
+    - MIT License
 """
 
 import re
@@ -41,37 +51,48 @@ _abbreviations = [(re.compile("\\b%s\\." % x[0], re.IGNORECASE), x[1]) for x in 
 
 
 def expand_abbreviations(text):
+  """Expands common abbreviations (e.g. 'Dr.' -> 'Doctor')."""
   for regex, replacement in _abbreviations:
     text = re.sub(regex, replacement, text)
   return text
 
 
 def expand_numbers(text):
+  """Expands number strings into words using the numbers module."""
   return normalize_numbers(text)
 
 
 def lowercase(text):
-  """lowercase input tokens."""
+  """Converts text to lowercase."""
   return text.lower()
 
 
 def collapse_whitespace(text):
+  """Replaces multiple whitespace characters with a single space."""
   return re.sub(_whitespace_re, " ", text)
 
 
 def convert_to_ascii(text):
+  """Converts unicode text to ASCII using unidecode transliteration."""
   return unidecode(text)
 
 
 def basic_cleaners(text):
-  """Basic pipeline that lowercases and collapses whitespace without transliteration."""
+  """
+  Basic text cleaning pipeline.
+  Lowercases and collapses whitespace without transliteration.
+  """
   text = lowercase(text)
   text = collapse_whitespace(text)
   return text
 
 
 def transliteration_cleaners(text):
-  """Pipeline for non-English text that transliterates to ASCII."""
+  """
+  Pipeline for non-English text.
+  Transliterates text to ASCII, lowercases it, and collapses whitespace.
+  Useful for languages that can be reasonably approximated by ASCII characters.
+  """
   text = convert_to_ascii(text)
   text = lowercase(text)
   text = collapse_whitespace(text)
@@ -79,7 +100,14 @@ def transliteration_cleaners(text):
 
 
 def english_cleaners(text):
-  """Pipeline for English text, including number and abbreviation expansion."""
+  """
+  Comprehensive pipeline for English text.
+  1. Converts to ASCII.
+  2. Lowercases.
+  3. Expands numbers to words.
+  4. Expands abbreviations.
+  5. Collapses whitespace.
+  """
   text = convert_to_ascii(text)
   text = lowercase(text)
   text = expand_numbers(text)

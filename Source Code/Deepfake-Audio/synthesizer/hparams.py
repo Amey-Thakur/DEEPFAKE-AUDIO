@@ -1,4 +1,54 @@
-from tensorflow.contrib.training import HParams
+"""
+Deepfake Audio - Synthesizer Hyperparameters
+--------------------------------------------
+Configuration options for the Tacotron-2 synthesizer model.
+These parameters control the audio processing, model architecture, training, 
+and evaluation settings.
+
+Authors:
+    - Amey Thakur (https://github.com/Amey-Thakur)
+    - Mega Satish (https://github.com/msatmod)
+
+Repository:
+    - https://github.com/Amey-Thakur/DEEPFAKE-AUDIO
+
+Release Date:
+    - February 06, 2021
+
+License:
+    - MIT License
+"""
+
+try:
+    from tensorflow.contrib.training import HParams
+except ImportError:
+    class HParams:
+        def __init__(self, **kwargs):
+            self.__dict__.update(kwargs)
+
+        def add_hparam(self, name, value):
+            setattr(self, name, value)
+
+        def parse(self, values):
+            if not values:
+                return self
+            # Simple parser for comma-separated key=value pairs
+            for kv in values.split(","):
+                k, v = kv.split("=")
+                k = k.strip()
+                v = v.strip()
+                val = v
+                if v == 'True': val = True
+                elif v == 'False': val = False
+                elif v.isdigit(): val = int(v)
+                else:
+                    try: val = float(v)
+                    except ValueError: pass
+                setattr(self, k, val)
+            return self
+            
+        def values(self):
+            return self.__dict__
 
 # Default hyperparameters
 hparams = HParams(

@@ -1,18 +1,49 @@
+"""
+Deepfake Audio - Plotting Utilities
+-----------------------------------
+Functions for plotting spectrograms and alignments.
+Used for visualizing training progress and synthesis results.
+
+Authors:
+    - Amey Thakur (https://github.com/Amey-Thakur)
+    - Mega Satish (https://github.com/msatmod)
+
+Repository:
+    - https://github.com/Amey-Thakur/DEEPFAKE-AUDIO
+
+Release Date:
+    - February 06, 2021
+
+License:
+    - MIT License
+"""
+
 import matplotlib
-matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
+
+matplotlib.use("Agg")
 
 
 def split_title_line(title_text, max_words=5):
 	"""
-	A function that splits any string based on specific character
-	(returning it with the string), with maximum number of words on it
+	Splits the title text into multiple lines if it exceeds the max_words limit.
+	Helps in keeping the plot titles readable.
 	"""
 	seq = title_text.split()
 	return "\n".join([" ".join(seq[i:i + max_words]) for i in range(0, len(seq), max_words)])
 
 def plot_alignment(alignment, path, title=None, split_title=False, max_len=None):
+	"""
+	Plots the attention alignment matrix.
+	
+	Args:
+		alignment: Numpy array containing the alignment weights.
+		path: Path (string) to save the plot.
+		title: Title of the plot.
+		split_title: Boolean, whether to split the title into multiple lines.
+		max_len: Optional integer to truncate the alignment length (decoder steps).
+	"""
 	if max_len is not None:
 		alignment = alignment[:, :max_len]
 
@@ -39,6 +70,18 @@ def plot_alignment(alignment, path, title=None, split_title=False, max_len=None)
 
 
 def plot_spectrogram(pred_spectrogram, path, title=None, split_title=False, target_spectrogram=None, max_len=None, auto_aspect=False):
+	"""
+	Plots the predicted mel-spectrogram and optionally the target spectrogram.
+	
+	Args:
+		pred_spectrogram: Numpy array of the predicted spectrogram.
+		path: Path (string) to save the plot.
+		title: Title of the plot.
+		split_title: Boolean, whether to split the title.
+		target_spectrogram: Optional numpy array of the ground truth spectrogram.
+		max_len: Optional integer to truncate the time axis.
+		auto_aspect: Boolean, whether to use 'auto' aspect ratio for imshow.
+	"""
 	if max_len is not None:
 		target_spectrogram = target_spectrogram[:max_len]
 		pred_spectrogram = pred_spectrogram[:max_len]

@@ -1,5 +1,24 @@
 from .symbols import symbols
 from . import cleaners
+"""
+Deepfake Audio - Text Processing
+--------------------------------
+Utilities for converting text to sequences of symbol IDs and vice versa.
+
+Authors:
+    - Amey Thakur (https://github.com/Amey-Thakur)
+    - Mega Satish (https://github.com/msatmod)
+
+Repository:
+    - https://github.com/Amey-Thakur/DEEPFAKE-AUDIO
+
+Release Date:
+    - February 06, 2021
+
+License:
+    - MIT License
+"""
+
 import re
 
 # Mappings from symbol to numeric ID and vice versa:
