@@ -1,3 +1,23 @@
+"""
+Deepfake Audio - Synthesizer Modules
+------------------------------------
+Neural network modules used in Tacotron 2, including CBHG, HighwayNet, 
+ZoneoutLSTMCell, Prenet, Postnet, and projection layers.
+
+Authors:
+    - Amey Thakur (https://github.com/Amey-Thakur)
+    - Mega Satish (https://github.com/msatmod)
+
+Repository:
+    - https://github.com/Amey-Thakur/DEEPFAKE-AUDIO
+
+Release Date:
+    - February 06, 2021
+
+License:
+    - MIT License
+"""
+
 import tensorflow as tf
 import torch
 

@@ -1,20 +1,49 @@
+"""
+Deepfake Audio - WaveRNN Model (Fatchord Version)
+-------------------------------------------------
+Implementation of the WaveRNN model (fatchord version).
+Includes ResNet, UpsampleNetwork, and the main WaveRNN class.
+
+Authors:
+    - Amey Thakur (https://github.com/Amey-Thakur)
+    - Mega Satish (https://github.com/msatmod)
+
+Repository:
+    - https://github.com/Amey-Thakur/DEEPFAKE-AUDIO
+
+Release Date:
+    - February 06, 2021
+
+License:
+    - MIT License
+"""
+
+from typing import Tuple, List, Any, Optional
+
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from vocoder.distribution import sample_from_discretized_mix_logistic
-from vocoder.display import *
+
 from vocoder.audio import *
+from vocoder.display import *
+from vocoder.distribution import sample_from_discretized_mix_logistic
 
 
 class ResBlock(nn.Module):
-    def __init__(self, dims):
+    """
+    Residual Block for the MelResNet.
+    Consists of two 1D convolutions with BatchNorm and ReLU.
+    """
+    
+    def __init__(self, dims: int):
         super().__init__()
         self.conv1 = nn.Conv1d(dims, dims, kernel_size=1, bias=False)
         self.conv2 = nn.Conv1d(dims, dims, kernel_size=1, bias=False)
         self.batch_norm1 = nn.BatchNorm1d(dims)
         self.batch_norm2 = nn.BatchNorm1d(dims)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         residual = x
         x = self.conv1(x)
         x = self.batch_norm1(x)
@@ -25,7 +54,12 @@ class ResBlock(nn.Module):
 
 
 class MelResNet(nn.Module):
-    def __init__(self, res_blocks, in_dims, compute_dims, res_out_dims, pad):
+    """
+    Mel-Spectrogram Residual Network.
+    Processes the mel spectrogram input before upsampling.
+    """
+    
+    def __init__(self, res_blocks: int, in_dims: int, compute_dims: int, res_out_dims: int, pad: int):
         super().__init__()
         k_size = pad * 2 + 1
         self.conv_in = nn.Conv1d(in_dims, compute_dims, kernel_size=k_size, bias=False)
@@ -35,7 +69,7 @@ class MelResNet(nn.Module):
             self.layers.append(ResBlock(compute_dims))
         self.conv_out = nn.Conv1d(compute_dims, res_out_dims, kernel_size=1)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.conv_in(x)
         x = self.batch_norm(x)
         x = F.relu(x)
@@ -45,12 +79,16 @@ class MelResNet(nn.Module):
 
 
 class Stretch2d(nn.Module):
-    def __init__(self, x_scale, y_scale):
+    """
+    Upsampling layer that repeats input features along time and frequency axes.
+    """
+    
+    def __init__(self, x_scale: int, y_scale: int):
         super().__init__()
         self.x_scale = x_scale
         self.y_scale = y_scale
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         b, c, h, w = x.size()
         x = x.unsqueeze(-1).unsqueeze(3)
         x = x.repeat(1, 1, 1, self.y_scale, 1, self.x_scale)
@@ -58,8 +96,13 @@ class Stretch2d(nn.Module):
 
 
 class UpsampleNetwork(nn.Module):
-    def __init__(self, feat_dims, upsample_scales, compute_dims,
-                 res_blocks, res_out_dims, pad):
+    """
+    Upsampling Network to match mel spectrogram time resolution with audio sample rate.
+    Uses MelResNet followed by a series of Stretch2d and Conv2d layers.
+    """
+    
+    def __init__(self, feat_dims: int, upsample_scales: List[int], compute_dims: int,
+                 res_blocks: int, res_out_dims: int, pad: int):
         super().__init__()
         total_scale = np.cumproduct(upsample_scales)[-1]
         self.indent = pad * total_scale
@@ -75,7 +118,7 @@ class UpsampleNetwork(nn.Module):
             self.up_layers.append(stretch)
             self.up_layers.append(conv)
 
-    def forward(self, m):
+    def forward(self, m: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         aux = self.resnet(m).unsqueeze(1)
         aux = self.resnet_stretch(aux)
         aux = aux.squeeze(1)
@@ -86,9 +129,31 @@ class UpsampleNetwork(nn.Module):
 
 
 class WaveRNN(nn.Module):
-    def __init__(self, rnn_dims, fc_dims, bits, pad, upsample_factors,
-                 feat_dims, compute_dims, res_out_dims, res_blocks,
-                 hop_length, sample_rate, mode='RAW'):
+    """
+    WaveRNN Model Class.
+    Autoregressive model for raw audio waveform generation.
+    """
+    
+    def __init__(self, rnn_dims: int, fc_dims: int, bits: int, pad: int, upsample_factors: List[int],
+                 feat_dims: int, compute_dims: int, res_out_dims: int, res_blocks: int,
+                 hop_length: int, sample_rate: int, mode: str = 'RAW'):
+        """
+        Initializes the WaveRNN model.
+        
+        Args:
+            rnn_dims: Dimension of the GRU hidden states.
+            fc_dims: Dimension of the fully connected layers.
+            bits: Bit depth for audio quantization.
+            pad: Padding size.
+            upsample_factors: Factors for upsampling mel spectrograms.
+            feat_dims: Input feature dimensions (num_mels).
+            compute_dims: Internal computation dimensions.
+            res_out_dims: Output dimension of residual blocks.
+            res_blocks: Number of residual blocks.
+            hop_length: Hop length of the spectrograms.
+            sample_rate: Audio sampling rate.
+            mode: 'RAW' for softmax output or 'MOL' for Mixture of Logistics.
+        """
         super().__init__()
         self.mode = mode
         self.pad = pad
@@ -115,7 +180,8 @@ class WaveRNN(nn.Module):
         self.step = nn.Parameter(torch.zeros(1).long(), requires_grad=False)
         self.num_params()
 
-    def forward(self, x, mels):
+    def forward(self, x: torch.Tensor, mels: torch.Tensor) -> torch.Tensor:
+        """Forward pass of the WaveRNN (used during training)."""
         self.step += 1
         bsize = x.size(0)
         h1 = torch.zeros(1, bsize, self.rnn_dims).cuda()
@@ -146,7 +212,19 @@ class WaveRNN(nn.Module):
         x = F.relu(self.fc2(x))
         return self.fc3(x)
 
-    def generate(self, mels, batched, target, overlap, mu_law, progress_callback=None):
+    def generate(self, mels: torch.Tensor, batched: bool, target: int, overlap: int, 
+                 mu_law: bool, progress_callback: Optional[Any] = None) -> np.ndarray:
+        """
+        Generates audio waveform from mel spectrogram input.
+        
+        Args:
+            mels: Input mel spectrogram.
+            batched: Whether to generate in batches.
+            target: Target samples per batch.
+            overlap: Overlap between batches.
+            mu_law: Whether to use mu-law decoding.
+            progress_callback: Callback for progress updates.
+        """
         mu_law = mu_law if self.mode == 'RAW' else False
         progress_callback = progress_callback or self.gen_display
 
@@ -249,13 +327,12 @@ class WaveRNN(nn.Module):
 
         return output
 
-
-    def gen_display(self, i, seq_len, b_size, gen_rate):
+    def gen_display(self, i: int, seq_len: int, b_size: int, gen_rate: float) -> None:
         pbar = progbar(i, seq_len)
         msg = f'| {pbar} {i*b_size}/{seq_len*b_size} | Batch Size: {b_size} | Gen Rate: {gen_rate:.1f}kHz | '
         stream(msg)
 
-    def get_gru_cell(self, gru):
+    def get_gru_cell(self, gru: nn.GRU) -> nn.GRUCell:
         gru_cell = nn.GRUCell(gru.input_size, gru.hidden_size)
         gru_cell.weight_hh.data = gru.weight_hh_l0.data
         gru_cell.weight_ih.data = gru.weight_ih_l0.data
@@ -263,7 +340,7 @@ class WaveRNN(nn.Module):
         gru_cell.bias_ih.data = gru.bias_ih_l0.data
         return gru_cell
 
-    def pad_tensor(self, x, pad, side='both'):
+    def pad_tensor(self, x: torch.Tensor, pad: int, side: str = 'both') -> torch.Tensor:
         # NB - this is just a quick method i need right now
         # i.e., it won't generalise to other shapes/dims
         b, t, c = x.size()
@@ -278,8 +355,7 @@ class WaveRNN(nn.Module):
             padded[:, :t, :] = x
         return padded
 
-    def fold_with_overlap(self, x, target, overlap):
-
+    def fold_with_overlap(self, x: torch.Tensor, target: int, overlap: int) -> torch.Tensor:
         ''' Fold the tensor with overlap for quick batched inference.
             Overlap will be used for crossfading in xfade_and_unfold()
 
@@ -330,8 +406,7 @@ class WaveRNN(nn.Module):
 
         return folded
 
-    def xfade_and_unfold(self, y, target, overlap):
-
+    def xfade_and_unfold(self, y: np.ndarray, target: int, overlap: int) -> np.ndarray:
         ''' Applies a crossfade and unfolds into a 1d array.
 
         Args:
@@ -359,7 +434,6 @@ class WaveRNN(nn.Module):
             Stagger and add up the groups of samples:
 
             [seq1_in, seq1_target, (seq1_out + seq2_in), seq2_target, ...]
-
         '''
 
         num_folds, length = y.shape
@@ -394,18 +468,18 @@ class WaveRNN(nn.Module):
 
         return unfolded
 
-    def get_step(self) :
+    def get_step(self) -> int:
         return self.step.data.item()
 
-    def checkpoint(self, model_dir, optimizer) :
+    def checkpoint(self, model_dir: Any, optimizer: Any) -> None:
         k_steps = self.get_step() // 1000
         self.save(model_dir.joinpath("checkpoint_%dk_steps.pt" % k_steps), optimizer)
 
-    def log(self, path, msg) :
+    def log(self, path: Any, msg: str) -> None:
         with open(path, 'a') as f:
             print(msg, file=f)
 
-    def load(self, path, optimizer) :
+    def load(self, path: Any, optimizer: Any) -> None:
         checkpoint = torch.load(path)
         if "optimizer_state" in checkpoint:
             self.load_state_dict(checkpoint["model_state"])
@@ -414,13 +488,13 @@ class WaveRNN(nn.Module):
             # Backwards compatibility
             self.load_state_dict(checkpoint)
 
-    def save(self, path, optimizer) :
+    def save(self, path: Any, optimizer: Any) -> None:
         torch.save({
             "model_state": self.state_dict(),
             "optimizer_state": optimizer.state_dict(),
         }, path)
 
-    def num_params(self, print_out=True):
+    def num_params(self, print_out: bool = True) -> None:
         parameters = filter(lambda p: p.requires_grad, self.parameters())
         parameters = sum([np.prod(p.size()) for p in parameters]) / 1_000_000
         if print_out :

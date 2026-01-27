@@ -1,8 +1,8 @@
 """
-Deepfake Audio - Utils Package
-------------------------------
-Utility functions and classes for the Deepfake Audio project.
-Includes argument parsing utilities, noise reduction (LogMMSE), and profiling tools.
+Deepfake Audio - Vocoder Package
+--------------------------------
+The Vocoder package provides the WaveRNN model and associated utilities for 
+converting mel spectrograms into raw audio waveforms.
 
 Authors:
     - Amey Thakur (https://github.com/Amey-Thakur)

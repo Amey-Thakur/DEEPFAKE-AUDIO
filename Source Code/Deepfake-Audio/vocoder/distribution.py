@@ -1,9 +1,29 @@
+"""
+Deepfake Audio - Mixture of Logistics Distribution
+--------------------------------------------------
+Implementation of Discretized Mixture of Logistics (MoL) loss and sampling.
+Adapted from: https://github.com/r9y9/wavenet_vocoder
+
+Authors:
+    - Amey Thakur (https://github.com/Amey-Thakur)
+    - Mega Satish (https://github.com/msatmod)
+
+Repository:
+    - https://github.com/Amey-Thakur/DEEPFAKE-AUDIO
+
+Release Date:
+    - February 06, 2021
+
+License:
+    - MIT License
+"""
+
 import numpy as np
 import torch
 import torch.nn.functional as F
 
 
-def log_sum_exp(x):
+def log_sum_exp(x: torch.Tensor) -> torch.Tensor:
     """ numerically stable log_sum_exp implementation that prevents overflow """
     # TF ordering
     axis = len(x.size()) - 1
@@ -13,8 +33,18 @@ def log_sum_exp(x):
 
 
 # It is adapted from https://github.com/r9y9/wavenet_vocoder/blob/master/wavenet_vocoder/mixture.py
-def discretized_mix_logistic_loss(y_hat, y, num_classes=65536,
-                                  log_scale_min=None, reduce=True):
+def discretized_mix_logistic_loss(y_hat: torch.Tensor, y: torch.Tensor, num_classes: int = 65536,
+                                  log_scale_min: float = None, reduce: bool = True) -> torch.Tensor:
+    """
+    Computes the discretized mixture of logistics loss.
+
+    Args:
+        y_hat: Predicted distribution parameters (means, log_scales, logit_probs).
+        y: Target values.
+        num_classes: Number of quantization classes.
+        log_scale_min: Minimum value for log scale.
+        reduce: Whether to return the mean loss or the full loss tensor.
+    """
     if log_scale_min is None:
         log_scale_min = float(np.log(1e-14))
     y_hat = y_hat.permute(0,2,1)
@@ -84,7 +114,7 @@ def discretized_mix_logistic_loss(y_hat, y, num_classes=65536,
         return -log_sum_exp(log_probs).unsqueeze(-1)
 
 
-def sample_from_discretized_mix_logistic(y, log_scale_min=None):
+def sample_from_discretized_mix_logistic(y: torch.Tensor, log_scale_min: float = None) -> torch.Tensor:
     """
     Sample from discretized mixture of logistic distributions
     Args:
@@ -123,7 +153,7 @@ def sample_from_discretized_mix_logistic(y, log_scale_min=None):
     return x
 
 
-def to_one_hot(tensor, n, fill_with=1.):
+def to_one_hot(tensor: torch.Tensor, n: int, fill_with: float = 1.) -> torch.Tensor:
     # we perform one hot encore with respect to the last axis
     one_hot = torch.FloatTensor(tensor.size() + (n,)).zero_()
     if tensor.is_cuda:

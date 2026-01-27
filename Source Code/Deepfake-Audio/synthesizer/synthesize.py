@@ -1,13 +1,51 @@
-from synthesizer.tacotron2 import Tacotron2
-from synthesizer.hparams import hparams_debug_string
-from synthesizer.infolog import log
+"""
+Deepfake Audio - Synthesis Execution
+------------------------------------
+Functions to run synthesis tasks for evaluation or generation.
+Handles directory setup, model loading, and batch processing.
+Entry point for running synthesis on test sentences or metadata.
+
+Authors:
+    - Amey Thakur (https://github.com/Amey-Thakur)
+    - Mega Satish (https://github.com/msatmod)
+
+Repository:
+    - https://github.com/Amey-Thakur/DEEPFAKE-AUDIO
+
+Release Date:
+    - February 06, 2021
+
+License:
+    - MIT License
+"""
+
+import os
+import time
+from typing import Any, List, Optional, Tuple
+
 import tensorflow as tf
 from tqdm import tqdm
-import time
-import os
+
+from synthesizer.hparams import hparams_debug_string
+from synthesizer.infolog import log
+from synthesizer.tacotron2 import Tacotron2
 
 
 def run_eval(args, checkpoint_path, output_dir, hparams, sentences):
+    """
+    Runs evaluation on a set of sentences.
+    Synthesizes audio and saves the results in an evaluation directory.
+
+    Args:
+        args: Command line arguments.
+        checkpoint_path: Path to the model checkpoint.
+        output_dir: Directory to save the outputs.
+        hparams: Hyperparameters object.
+        sentences: List of sentences to synthesize.
+
+    Returns:
+        eval_dir: Path to the directory where evaluation results are saved.
+    """
     eval_dir = os.path.join(output_dir, "eval")
     log_dir = os.path.join(output_dir, "logs-eval")
     
@@ -36,7 +74,21 @@ def run_eval(args, checkpoint_path, output_dir, hparams, sentences):
     log("synthesized mel spectrograms at {}".format(eval_dir))
     return eval_dir
 
+
 def run_synthesis(in_dir, out_dir, model_dir, hparams):
+    """
+    Runs synthesis on an entire dataset defined by metadata.
+    Used for generating synthetic ground truth aligned (GTA) spectrograms for vocoder training.
+
+    Args:
+        in_dir: Input directory containing metadata and embeddings.
+        out_dir: Output directory for synthesized spectrograms.
+        model_dir: Directory containing the trained model checkpoints.
+        hparams: Hyperparameters object.
+
+    Returns:
+        meta_out_fpath: Path to the generated metadata file.
+    """
     synth_dir = os.path.join(out_dir, "mels_gta")
     os.makedirs(synth_dir, exist_ok=True)
     metadata_filename = os.path.join(in_dir, "train.txt")

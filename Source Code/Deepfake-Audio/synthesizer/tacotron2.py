@@ -1,15 +1,52 @@
-from synthesizer.utils.text import text_to_sequence
+"""
+Deepfake Audio - Tacotron 2 Wrapper
+-----------------------------------
+Main class for the Tacotron 2 model, handling initialization, training, 
+and synthesis operations. It serves as an interface between the low-level
+TensorFlow model and the high-level training/inference scripts.
+
+Authors:
+    - Amey Thakur (https://github.com/Amey-Thakur)
+    - Mega Satish (https://github.com/msatmod)
+
+Repository:
+    - https://github.com/Amey-Thakur/DEEPFAKE-AUDIO
+
+Release Date:
+    - February 06, 2021
+
+License:
+    - MIT License
+"""
+
+import os
+from typing import Any, List, Optional, Tuple, Dict
+
+import numpy as np
+import tensorflow as tf
+
+from synthesizer import audio
 from synthesizer.infolog import log
 from synthesizer.models import create_model
 from synthesizer.utils import plot
-from synthesizer import audio
-import tensorflow as tf
-import numpy as np
-import os
+from synthesizer.utils.text import text_to_sequence
 
 
 class Tacotron2:
+    """
+    Wrapper class for the Tacotron 2 model.
+    Handles graph construction, session management, and inference execution.
+    """
     def __init__(self, checkpoint_path, hparams, gta=False, model_name="Tacotron"):
+        """
+        Initializes the Tacotron 2 model.
+
+        Args:
+            checkpoint_path: Path to the model checkpoint.
+            hparams: Hyperparameters object.
+            gta: Boolean, whether to run in Ground Truth Alignment mode.
+            model_name: Name of the model architecture to use.
+        """
         log("Constructing model: %s" % model_name)
         #Force the batch size to be known in order to use attention masking in batch synthesis
         inputs = tf.compat.v1.placeholder(tf.int32, (None, None), name="inputs")
@@ -65,6 +102,7 @@ class Tacotron2:
     def my_synthesize(self, speaker_embeds, texts):
         """
         Lighter synthesis function that directly returns the mel spectrograms.
+        Used for inference when we want raw data rather than saved files.
         """
         
         # Prepare the input
@@ -98,6 +136,10 @@ class Tacotron2:
         return [mel.T for mel in mels], alignments
     
     def synthesize(self, texts, basenames, out_dir, log_dir, mel_filenames, embed_filenames):
+        """
+        Performs synthesis for a batch of texts.
+        Handles batching, padding, and saving outputs (wavs/plots).
+        """
         hparams = self._hparams
         cleaner_names = [x.strip() for x in hparams.cleaners.split(",")]
               
@@ -225,6 +267,9 @@ class Tacotron2:
         return np.pad(x, (0, length - x.shape[0]), mode="constant", constant_values=self._pad)
     
     def _prepare_targets(self, targets, alignment):
+        """
+        Prepares target sequences by padding them to a multiple of r.
+        """
         max_len = max([len(t) for t in targets])
         data_len = self._round_up(max_len, alignment)
         return np.stack([self._pad_target(t, data_len) for t in targets]), data_len

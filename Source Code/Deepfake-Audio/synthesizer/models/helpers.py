@@ -1,6 +1,30 @@
+"""
+Deepfake Audio - Training & Test Helpers
+----------------------------------------
+Helper classes for Tacotron 2 training and inference (testing).
+Manages input feeding and stopped status.
+
+Authors:
+    - Amey Thakur (https://github.com/Amey-Thakur)
+    - Mega Satish (https://github.com/msatmod)
+
+Repository:
+    - https://github.com/Amey-Thakur/DEEPFAKE-AUDIO
+
+Release Date:
+    - February 06, 2021
+
+License:
+    - MIT License
+"""
+
 import numpy as np
 import tensorflow as tf
-from tensorflow.contrib.seq2seq import Helper
+import tensorflow as tf
+
+class Helper(object):
+    """Abstract base class for data helpers."""
+    pass
 
 
 class TacoTestHelper(Helper):

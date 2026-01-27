@@ -1,9 +1,27 @@
+"""
+Deepfake Audio - Custom Decoder
+-------------------------------
+Custom sampling decoder that allows for stop token prediction at inference time
+and returns equivalent loss in training time.
+
+Authors:
+    - Amey Thakur (https://github.com/Amey-Thakur)
+    - Mega Satish (https://github.com/msatmod)
+
+Repository:
+    - https://github.com/Amey-Thakur/DEEPFAKE-AUDIO
+
+Release Date:
+    - February 06, 2021
+
+License:
+    - MIT License
+"""
 from __future__ import absolute_import, division, print_function
 import collections
 import tensorflow as tf
-from synthesizer.models.helpers import TacoTestHelper, TacoTrainingHelper
-from tensorflow.contrib.seq2seq.python.ops import decoder
-from tensorflow.contrib.seq2seq.python.ops import helper as helper_py
+from synthesizer.models.helpers import TacoTestHelper, TacoTrainingHelper, Helper as HelperPy
+from tensorflow_addons.seq2seq import BaseDecoder as Decoder
 from tensorflow.python.framework import ops, tensor_shape
 from tensorflow.python.layers import base as layers_base
 from tensorflow.python.ops import rnn_cell_impl
@@ -15,7 +33,7 @@ class CustomDecoderOutput(
 	pass
 
 
-class CustomDecoder(decoder.Decoder):
+class CustomDecoder(Decoder):
 	"""Custom sampling decoder.
 
 	Allows for stop token prediction at inference time
@@ -39,7 +57,7 @@ class CustomDecoder(decoder.Decoder):
 			TypeError: if `cell`, `helper` or `output_layer` have an incorrect type.
 		"""
 		rnn_cell_impl.assert_like_rnncell(type(cell), cell)
-		if not isinstance(helper, helper_py.Helper):
+		if not isinstance(helper, HelperPy):
 			raise TypeError("helper must be a Helper, received: %s" % type(helper))
 		if (output_layer is not None
 				and not isinstance(output_layer, layers_base.Layer)):

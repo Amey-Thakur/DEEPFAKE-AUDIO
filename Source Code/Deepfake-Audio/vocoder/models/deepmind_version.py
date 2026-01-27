@@ -1,12 +1,48 @@
+"""
+Deepfake Audio - WaveRNN Model (DeepMind Version)
+-------------------------------------------------
+Alternative implementation of the WaveRNN model (DeepMind version).
+Currently not primarily used but maintained for reference.
+
+Authors:
+    - Amey Thakur (https://github.com/Amey-Thakur)
+    - Mega Satish (https://github.com/msatmod)
+
+Repository:
+    - https://github.com/Amey-Thakur/DEEPFAKE-AUDIO
+
+Release Date:
+    - February 06, 2021
+
+License:
+    - MIT License
+"""
+
+from typing import Tuple, List, Any
+import time
+
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from utils.display import *
-from utils.dsp import *
+
+from vocoder.display import stream # Adjusted import, assuming utils.display meant vocoder.display
+from vocoder.audio import combine_signal # Adjusted import, assuming utils.dsp meant vocoder.audio
 
 
-class WaveRNN(nn.Module) :
-    def __init__(self, hidden_size=896, quantisation=256) :
+class WaveRNN(nn.Module):
+    """
+    DeepMind Version of WaveRNN.
+    """
+    
+    def __init__(self, hidden_size: int = 896, quantisation: int = 256):
+        """
+        Initializes the DeepMind WaveRNN model.
+
+        Args:
+            hidden_size: Size of the hidden layers.
+            quantisation: Number of quantization levels.
+        """
         super(WaveRNN, self).__init__()
         
         self.hidden_size = hidden_size
@@ -34,7 +70,7 @@ class WaveRNN(nn.Module) :
         self.num_params()
 
         
-    def forward(self, prev_y, prev_hidden, current_coarse) :
+    def forward(self, prev_y: torch.Tensor, prev_hidden: torch.Tensor, current_coarse: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         
         # Main matmul - the projection is split 3 ways
         R_hidden = self.R(prev_hidden)
@@ -72,7 +108,8 @@ class WaveRNN(nn.Module) :
         return out_coarse, out_fine, hidden
     
         
-    def generate(self, seq_len):
+    def generate(self, seq_len: int) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Generates a sequence of audio samples."""
         with torch.no_grad():
             # First split up the biases for the gates 
             b_coarse_u, b_fine_u = torch.split(self.bias_u, self.split_size)
@@ -161,10 +198,10 @@ class WaveRNN(nn.Module) :
         
         return output, coarse, fine
 
-    def init_hidden(self, batch_size=1) :
+    def init_hidden(self, batch_size: int = 1) -> torch.Tensor:
         return torch.zeros(batch_size, self.hidden_size).cuda()
     
-    def num_params(self) :
+    def num_params(self) -> None:
         parameters = filter(lambda p: p.requires_grad, self.parameters())
         parameters = sum([np.prod(p.size()) for p in parameters]) / 1_000_000
         print('Trainable Parameters: %.3f million' % parameters)

@@ -1,3 +1,23 @@
+"""
+Deepfake Audio - Vocoder Hyperparameters
+----------------------------------------
+Hyperparameters for the Vocoder model (WaveRNN).
+These values are synchronized with the Synthesizer's hyperparameters to ensure compatibility.
+
+Authors:
+    - Amey Thakur (https://github.com/Amey-Thakur)
+    - Mega Satish (https://github.com/msatmod)
+
+Repository:
+    - https://github.com/Amey-Thakur/DEEPFAKE-AUDIO
+
+Release Date:
+    - February 06, 2021
+
+License:
+    - MIT License
+"""
+
 from synthesizer.hparams import hparams as _syn_hp
 
 

@@ -1,13 +1,50 @@
-from torch.utils.data import Dataset
+"""
+Deepfake Audio - Vocoder Dataset
+--------------------------------
+Dataset class and collate function for the Vocoder (WaveRNN).
+Handles loading of mel spectrograms and raw audio waveforms, preprocessing, 
+and batch preparation.
+
+Authors:
+    - Amey Thakur (https://github.com/Amey-Thakur)
+    - Mega Satish (https://github.com/msatmod)
+
+Repository:
+    - https://github.com/Amey-Thakur/DEEPFAKE-AUDIO
+
+Release Date:
+    - February 06, 2021
+
+License:
+    - MIT License
+"""
+
 from pathlib import Path
-from vocoder import audio
-import vocoder.hparams as hp
+from typing import Tuple, List, Any
+
 import numpy as np
 import torch
+from torch.utils.data import Dataset
+
+import vocoder.hparams as hp
+from vocoder import audio
 
 
 class VocoderDataset(Dataset):
+    """
+    Custom Dataset for training the Vocoder.
+    Loads mel spectrograms and corresponding audio waveforms.
+    """
+    
     def __init__(self, metadata_fpath: Path, mel_dir: Path, wav_dir: Path):
+        """
+        Initializes the VocoderDataset.
+
+        Args:
+            metadata_fpath: Path to the metadata file.
+            mel_dir: Directory containing mel spectrogram files.
+            wav_dir: Directory containing audio waveform files.
+        """
         print("Using inputs from:\n\t%s\n\t%s\n\t%s" % (metadata_fpath, mel_dir, wav_dir))
         
         with metadata_fpath.open("r") as metadata_file:
@@ -21,7 +58,11 @@ class VocoderDataset(Dataset):
         
         print("Found %d samples" % len(self.samples_fpaths))
     
-    def __getitem__(self, index):  
+    def __getitem__(self, index: int) -> Tuple[np.ndarray, np.ndarray]:  
+        """
+        Retrieves a single sample (mel, quantized_wav) from the dataset.
+        Applies pre-emphasis and quantization if specified in hparams.
+        """
         mel_path, wav_path = self.samples_fpaths[index]
         
         # Load the mel spectrogram and adjust its range to [-1, 1]
@@ -51,11 +92,16 @@ class VocoderDataset(Dataset):
             
         return mel.astype(np.float32), quant.astype(np.int64)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.samples_fpaths)
         
         
-def collate_vocoder(batch):
+def collate_vocoder(batch: List[Tuple[np.ndarray, np.ndarray]]) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    """
+    Collate function for batching.
+    Randomly crops sequences to fixed length defined in hparams.
+    Prepares input (x) and target (y) for the model.
+    """
     mel_win = hp.voc_seq_len // hp.hop_length + 2 * hp.voc_pad
     max_offsets = [x[0].shape[-1] -2 - (mel_win + 2 * hp.voc_pad) for x in batch]
     mel_offsets = [np.random.randint(0, offset) for offset in max_offsets]

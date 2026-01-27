@@ -1,9 +1,29 @@
+"""
+Deepfake Audio - Tacotron Model
+-------------------------------
+The main Tacotron-2 Feature prediction Model class.
+Defines the model graph, initialization, loss functions, and optimizer.
+
+Authors:
+    - Amey Thakur (https://github.com/Amey-Thakur)
+    - Mega Satish (https://github.com/msatmod)
+
+Repository:
+    - https://github.com/Amey-Thakur/DEEPFAKE-AUDIO
+
+Release Date:
+    - February 06, 2021
+
+License:
+    - MIT License
+"""
+
 import tensorflow as tf
 from synthesizer.utils.symbols import symbols
 from synthesizer.infolog import log
 from synthesizer.models.helpers import TacoTrainingHelper, TacoTestHelper
 from synthesizer.models.modules import *
-from tensorflow.contrib.seq2seq import dynamic_decode
+from tensorflow_addons.seq2seq import dynamic_decode
 from synthesizer.models.architecture_wrappers import TacotronEncoderCell, TacotronDecoderCell
 from synthesizer.models.custom_decoder import CustomDecoder
 from synthesizer.models.attention import LocationSensitiveAttention

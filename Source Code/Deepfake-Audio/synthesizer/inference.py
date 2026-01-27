@@ -1,17 +1,44 @@
-from synthesizer.tacotron2 import Tacotron2
-from synthesizer.hparams import hparams
-from multiprocess.pool import Pool  # You're free to use either one
-#from multiprocessing import Pool   # 
-from synthesizer import audio
+"""
+Deepfake Audio - Inference Synthesizer
+--------------------------------------
+Synthesizer class for inference-time operations. 
+Loads the model (Tacotron 2) and runs synthesis on input text and embeddings.
+Manages model loading, GPU memory usage, and audio preprocessing.
+
+Authors:
+    - Amey Thakur (https://github.com/Amey-Thakur)
+    - Mega Satish (https://github.com/msatmod)
+
+Repository:
+    - https://github.com/Amey-Thakur/DEEPFAKE-AUDIO
+
+Release Date:
+    - February 06, 2021
+
+License:
+    - MIT License
+"""
+
 from pathlib import Path
-from typing import Union, List
-import tensorflow as tf
-import numpy as np
-import numba.cuda
+from typing import Union, List, Optional, Tuple, Any
+
 import librosa
+import numba.cuda
+import numpy as np
+import tensorflow as tf
+from multiprocess.pool import Pool
+
+from synthesizer import audio
+from synthesizer.hparams import hparams
+from synthesizer.tacotron2 import Tacotron2
 
 
 class Synthesizer:
+    """
+    Synthesizer class for inference.
+    Manages the Tacotron 2 model, including loading checkpoints and running synthesis.
+    Supports low-memory mode for constrained environments.
+    """
     sample_rate = hparams.sample_rate
     hparams = hparams
     
@@ -20,12 +47,12 @@ class Synthesizer:
         Creates a synthesizer ready for inference. The actual model isn't loaded in memory until
         needed or until load() is called.
         
-        :param checkpoints_dir: path to the directory containing the checkpoint file as well as the
-        weight files (.data, .index and .meta files)
-        :param verbose: if False, only tensorflow's output will be printed TODO: suppress them too
-        :param low_mem: if True, the model will be loaded in a separate process and its resources 
-        will be released after each usage. Adds a large overhead, only recommended if your GPU 
-        memory is low (<= 2gb)
+        Args:
+            checkpoints_dir: Path to the directory containing the checkpoint file as well as the
+                             weight files (.data, .index and .meta files).
+            verbose: If False, suppresses output messages.
+            low_mem: If True, the model will be loaded in a separate process and its resources 
+                     will be released after each usage. Adds overhead but saves GPU memory.
         """
         self.verbose = verbose
         self._low_mem = low_mem
@@ -43,7 +70,7 @@ class Synthesizer:
      
     def is_loaded(self):
         """
-        Whether the model is loaded in GPU memory.
+        Returns True if the model is currently loaded in GPU memory.
         """
         return self._model is not None
     
@@ -63,13 +90,13 @@ class Synthesizer:
         """
         Synthesizes mel spectrograms from texts and speaker embeddings.
 
-        :param texts: a list of N text prompts to be synthesized
-        :param embeddings: a numpy array or list of speaker embeddings of shape (N, 256) 
-        :param return_alignments: if True, a matrix representing the alignments between the 
-        characters
-        and each decoder output step will be returned for each spectrogram
-        :return: a list of N melspectrograms as numpy arrays of shape (80, Mi), where Mi is the 
-        sequence length of spectrogram i, and possibly the alignments.
+        Args:
+            texts: A list of N text prompts to be synthesized.
+            embeddings: A numpy array or list of speaker embeddings of shape (N, 256).
+            return_alignments: If True, returns alignment matrices along with spectrograms.
+
+        Returns:
+            A list of N melspectrograms as numpy arrays, and optionally alignments.
         """
         if not self._low_mem:
             # Usual inference mode: load the model on the first request and keep it loaded.
@@ -87,6 +114,9 @@ class Synthesizer:
 
     @staticmethod
     def _one_shot_synthesize_spectrograms(checkpoint_fpath, embeddings, texts):
+        """
+        Runs synthesis in a separate process (one-shot) to manage memory.
+        """
         # Load the model and forward the inputs
         tf.compat.v1.reset_default_graph()
         model = Tacotron2(checkpoint_fpath, hparams)

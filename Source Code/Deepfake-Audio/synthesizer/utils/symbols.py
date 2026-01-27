@@ -1,8 +1,20 @@
 """
+Deepfake Audio - Symbol Definition
+----------------------------------
 Defines the set of symbols used in text input to the model.
 
-The default is a set of ASCII characters that works well for English or text that has been run
-through Unidecode. For other data, you can modify _characters. See TRAINING_DATA.md for details.
+Authors:
+    - Amey Thakur (https://github.com/Amey-Thakur)
+    - Mega Satish (https://github.com/msatmod)
+
+Repository:
+    - https://github.com/Amey-Thakur/DEEPFAKE-AUDIO
+
+Release Date:
+    - February 06, 2021
+
+License:
+    - MIT License
 """
 # from . import cmudict
 
@@ -14,4 +26,6 @@ _characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!\'\"(),-.:;?
 #_arpabet = ["@' + s for s in cmudict.valid_symbols]
 
 # Export all symbols:
+# The set of symbols includes the padding, end of sequence, and valid characters.
+# This list dictates the size of the embedding layer in the model.
 symbols = [_pad, _eos] + list(_characters) #+ _arpabet

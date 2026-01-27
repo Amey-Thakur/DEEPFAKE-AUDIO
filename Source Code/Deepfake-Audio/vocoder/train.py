@@ -1,19 +1,56 @@
+"""
+Deepfake Audio - Vocoder Training Script
+----------------------------------------
+Main training loop for the WaveRNN Vocoder.
+Handles data loading, model initialization, optimization, and checkpointing.
+
+Authors:
+    - Amey Thakur (https://github.com/Amey-Thakur)
+    - Mega Satish (https://github.com/msatmod)
+
+Repository:
+    - https://github.com/Amey-Thakur/DEEPFAKE-AUDIO
+
+Release Date:
+    - February 06, 2021
+
+License:
+    - MIT License
+"""
+
+import time
+from pathlib import Path
+from typing import Optional
+
+import numpy as np
+import torch
+import torch.nn.functional as F
+from torch import optim
+from torch.utils.data import DataLoader
+
+import vocoder.hparams as hp
+from vocoder.display import stream, simple_table
+from vocoder.distribution import discretized_mix_logistic_loss
+from vocoder.gen_wavernn import gen_testset
 from vocoder.models.fatchord_version import WaveRNN
 from vocoder.vocoder_dataset import VocoderDataset, collate_vocoder
-from vocoder.distribution import discretized_mix_logistic_loss
-from vocoder.display import stream, simple_table
-from vocoder.gen_wavernn import gen_testset
-from torch.utils.data import DataLoader
-from pathlib import Path
-from torch import optim
-import torch.nn.functional as F
-import vocoder.hparams as hp
-import numpy as np
-import time
 
 
 def train(run_id: str, syn_dir: Path, voc_dir: Path, models_dir: Path, ground_truth: bool,
-          save_every: int, backup_every: int, force_restart: bool):
+          save_every: int, backup_every: int, force_restart: bool) -> None:
+    """
+    Training loop for the WaveRNN model.
+
+    Args:
+        run_id: Identifier for the current training run.
+        syn_dir: Directory containing synthesizer outputs (if using GTA).
+        voc_dir: Directory containing vocoder training data.
+        models_dir: Directory to save model checkpoints.
+        ground_truth: Whether to train on ground truth mels (True) or GTA mels (False).
+        save_every: Save checkpoint every N steps.
+        backup_every: Backup checkpoint every N steps.
+        force_restart: Whether to force training from scratch.
+    """
     # Check to make sure the hop length is correctly factorised
     assert np.cumprod(hp.voc_upsample_factors)[-1] == hp.hop_length
     
