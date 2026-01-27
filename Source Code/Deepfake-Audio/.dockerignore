@@ -1,0 +1,13 @@
+venv/
+.git/
+.gradle/
+.idea/
+.vscode/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.gradio/
+*.ipynb
+outputs/
+logs/
