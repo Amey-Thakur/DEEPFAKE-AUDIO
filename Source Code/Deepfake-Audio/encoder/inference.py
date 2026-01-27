@@ -32,6 +32,7 @@ from matplotlib import cm
 
 # Internal Modules
 from encoder import audio
+from encoder.audio import preprocess_wav
 from encoder.model import SpeakerEncoder
 from encoder.params_data import (
     sampling_rate, mel_window_step, partials_n_frames
