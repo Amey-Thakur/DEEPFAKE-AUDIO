@@ -2,7 +2,7 @@
 
 👉 An audio deepfake occurs when a "cloned" voice, potentially indistinguishable from the original subject, is used to produce synthetic audio.
 
-- [Google Colaboratory](https://github.com/Amey-Thakur/DEEPFAKE-AUDIO/blob/main/Source%20Code/DEEPFAKE_AUDIO.ipynb)
+- [Google Colaboratory](https://github.com/Amey-Thakur/DEEPFAKE-AUDIO/blob/main/Source%20Code/Deepfake-Audio/DEEPFAKE_AUDIO.ipynb)
 - [Kaggle](https://www.kaggle.com/ameythakur20/deepfake-audio)
 - [Model](https://drive.google.com/uc?id=1n1sPXvT34yXFLT47QZA6FIRGrwMeSsZc)
 - [Project Demo](https://youtu.be/i3wnBcbHDbs)
