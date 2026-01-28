@@ -104,7 +104,7 @@ class UpsampleNetwork(nn.Module):
     def __init__(self, feat_dims: int, upsample_scales: List[int], compute_dims: int,
                  res_blocks: int, res_out_dims: int, pad: int):
         super().__init__()
-        total_scale = np.cumproduct(upsample_scales)[-1]
+        total_scale = np.cumprod(upsample_scales)[-1]
         self.indent = pad * total_scale
         self.resnet = MelResNet(res_blocks, feat_dims, compute_dims, res_out_dims, pad)
         self.resnet_stretch = Stretch2d(total_scale, 1)
@@ -319,9 +319,11 @@ class WaveRNN(nn.Module):
             output = de_emphasis(output)
 
         # Fade-out at the end to avoid signal cutting out suddenly
-        fade_out = np.linspace(1, 0, 20 * self.hop_length)
         output = output[:wave_len]
-        output[-20 * self.hop_length:] *= fade_out
+        fade_len = min(len(output), 20 * self.hop_length)
+        if fade_len > 0:
+            fade_out = np.linspace(1, 0, fade_len)
+            output[-fade_len:] *= fade_out
         
         self.train()
 

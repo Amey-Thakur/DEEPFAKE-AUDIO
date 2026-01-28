@@ -9,6 +9,9 @@ librosa==0.10.1
 soundfile==0.12.1
 pooch==1.8.1
 
+# Web UI
+gradio>=4.0.0
+
 # Utility Dependencies
 tqdm==4.67.1
 numba==0.59.0

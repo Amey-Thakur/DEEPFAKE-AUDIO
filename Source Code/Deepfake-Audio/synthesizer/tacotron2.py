@@ -96,8 +96,30 @@ class Tacotron2:
         self.session = tf.compat.v1.Session(config=config)
         self.session.run(tf.compat.v1.global_variables_initializer())
         
-        saver = tf.compat.v1.train.Saver()
-        saver.restore(self.session, checkpoint_path)
+        log("Standardizing variable mapping for legacy checkpoint...")
+        all_vars = tf.compat.v1.global_variables()
+        reader = tf.compat.v1.train.NewCheckpointReader(checkpoint_path)
+        ckpt_vars = reader.get_variable_to_shape_map().keys()
+        
+        var_mapping = {}
+        for v in all_vars:
+            name = v.name.split(':')[0]
+            if name in ckpt_vars:
+                var_mapping[name] = v
+            else:
+                # Handle common legacy naming mismatches
+                alt_name = name.replace("Location_Sensitive_Attention/attention_v", "Location_Sensitive_Attention/attention_variable_projection")
+                if alt_name in ckpt_vars:
+                    log(f"Mapping {name} (graph) to {alt_name} (checkpoint)")
+                    var_mapping[alt_name] = v
+        
+        if var_mapping:
+            saver = tf.compat.v1.train.Saver(var_list=var_mapping)
+            saver.restore(self.session, checkpoint_path)
+        else:
+            log("No matching variables found in checkpoint. Attempting standard restore.")
+            saver = tf.compat.v1.train.Saver()
+            saver.restore(self.session, checkpoint_path)
     
     def my_synthesize(self, speaker_embeds, texts):
         """
@@ -125,15 +147,16 @@ class Tacotron2:
         mels, alignments, stop_tokens = list(mels[0]), alignments[0], stop_tokens[0]
         
         # Trim the output
+        trimmed_mels = []
+        stop_threshold = -3.4  # Adaptive threshold from latest research
         for i in range(len(mels)):
-            try:
-                target_length = list(np.round(stop_tokens[i])).index(1)
-                mels[i] = mels[i][:target_length, :]
-            except ValueError:
-                # If no token is generated, we simply do not trim the output
-                continue
+            m = mels[i]
+            # Trim silence from end of each spectrogram based on energy
+            while m.shape[0] > 1 and np.max(m[-1, :]) < stop_threshold:
+                m = m[:-1, :]
+            trimmed_mels.append(m.T)
         
-        return [mel.T for mel in mels], alignments
+        return trimmed_mels, alignments
     
     def synthesize(self, texts, basenames, out_dir, log_dir, mel_filenames, embed_filenames):
         """

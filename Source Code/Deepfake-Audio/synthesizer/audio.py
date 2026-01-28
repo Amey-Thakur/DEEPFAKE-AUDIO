@@ -149,12 +149,17 @@ def _griffin_lim(S: np.ndarray, hparams: Any) -> np.ndarray:
     """
     librosa implementation of Griffin-Lim
     Based on https://github.com/librosa/librosa/issues/434
+    
+    Memory-optimized: Uses float32/complex64 instead of float64/complex128
+    to reduce memory usage by 50%.
     """
-    angles = np.exp(2j * np.pi * np.random.rand(*S.shape))
-    S_complex = np.abs(S).astype(complex)
+    # Use float32 to reduce memory usage
+    S = np.abs(S).astype(np.float32)
+    angles = np.exp(2j * np.pi * np.random.rand(*S.shape).astype(np.float32))
+    S_complex = S.astype(np.complex64)
     y = _istft(S_complex * angles, hparams)
     for i in range(hparams.griffin_lim_iters):
-        angles = np.exp(1j * np.angle(_stft(y, hparams)))
+        angles = np.exp(1j * np.angle(_stft(y, hparams))).astype(np.complex64)
         y = _istft(S_complex * angles, hparams)
     return y
 

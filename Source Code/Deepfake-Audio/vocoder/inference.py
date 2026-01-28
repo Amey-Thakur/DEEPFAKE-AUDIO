@@ -68,7 +68,7 @@ def load_model(weights_fpath: str, verbose: bool = True) -> None:
     if verbose:
         print("Loading model weights at %s" % weights_fpath)
     
-    checkpoint = torch.load(weights_fpath, map_location=_device)
+    checkpoint = torch.load(weights_fpath, map_location=_device, weights_only=False)
     _model.load_state_dict(checkpoint['model_state'])
     _model.eval()
 

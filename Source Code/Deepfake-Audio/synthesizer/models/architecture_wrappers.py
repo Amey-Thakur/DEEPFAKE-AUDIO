@@ -119,7 +119,8 @@ class TacotronDecoderCell(RNNCell):
 		self._frame_projection = frame_projection
 		self._stop_projection = stop_projection
 
-		self._attention_layer_size = self._attention_mechanism.values.get_shape()[-1].value
+		_dim = self._attention_mechanism.values.get_shape()[-1]
+		self._attention_layer_size = _dim.value if hasattr(_dim, "value") else _dim
 
 	def _batch_size_checks(self, batch_size, error_message):
 		return [check_ops.assert_equal(batch_size,
@@ -139,7 +140,7 @@ class TacotronDecoderCell(RNNCell):
 		"""
 		return TacotronDecoderCellState(
 			cell_state=self._cell._cell.state_size,
-			time=tensor_shape.TensorShape([]),
+			time=tensor_shape.TensorShape([1]),
 			attention=self._attention_layer_size,
 			alignments=self._attention_mechanism.alignments_size,
 			alignment_history=())
@@ -171,7 +172,7 @@ class TacotronDecoderCell(RNNCell):
 					cell_state)
 			return TacotronDecoderCellState(
 				cell_state=cell_state,
-				time=array_ops.zeros([], dtype=tf.int32),
+				time=array_ops.zeros([batch_size], dtype=tf.int32),
 				attention=_zero_state_tensors(self._attention_layer_size, batch_size,
 				  dtype),
 				alignments=self._attention_mechanism.initial_alignments(batch_size, dtype),
@@ -210,7 +211,7 @@ class TacotronDecoderCell(RNNCell):
 		stop_tokens = self._stop_projection(projections_input)
 
 		#Save alignment history
-		alignment_history = previous_alignment_history.write(state.time, alignments)
+		alignment_history = previous_alignment_history.write(state.time[0], alignments)
 
 		#Prepare next decoder state
 		next_state = TacotronDecoderCellState(
