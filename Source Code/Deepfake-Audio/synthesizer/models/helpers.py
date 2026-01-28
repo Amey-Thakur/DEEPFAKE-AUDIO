@@ -73,9 +73,10 @@ class TacoTestHelper(Helper):
 			#	learn to stop correctly yet, (stops too soon) one could choose to use the safer option
 			#	to get a correct synthesis
 			if self.stop_at_any:
-				finished = tf.reduce_any(tf.reduce_all(finished, axis=0)) #Recommended
+				finished = tf.reduce_any(finished, axis=-1)
 			else:
-				finished = tf.reduce_all(tf.reduce_all(finished, axis=0)) #Safer option
+				finished = tf.reduce_all(finished, axis=-1)
+			finished = tf.reshape(finished, [self._batch_size])
 
 			# Feed last output frame as next input. outputs is [N, output_dim * r]
 			next_inputs = outputs[:, -self._output_dim:]

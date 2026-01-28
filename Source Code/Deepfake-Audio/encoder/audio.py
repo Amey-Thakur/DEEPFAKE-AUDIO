@@ -74,6 +74,10 @@ def preprocess_wav(fpath_or_wav: Union[str, Path, np.ndarray],
     # 3. Apply volume normalization
     wav = normalize_volume(wav, audio_norm_target_dBFS, increase_only=True)
     
+    # Ensure mono if not already
+    if wav.ndim > 1:
+        wav = np.mean(wav, axis=1)
+    
     # 4. Apply Voice Activity Detection (VAD) to trim silences
     wav = trim_long_silences(wav)
     
@@ -106,10 +110,10 @@ def wav_to_mel_spectrogram(wav: np.ndarray) -> np.ndarray:
 
 def trim_long_silences(wav: np.ndarray) -> np.ndarray:
     """
-    Removes non-speech segments from the waveform using Librosa (replacing WebRTC VAD).
+    Removes non-speech segments from the waveform using Librosa.
     
-    This ensures that the encoder embedding is derived primarily from voiced segments,
-    preventing silence from diluting the speaker representation.
+    Memory-optimized: Uses smaller frame sizes to prevent massive STFT allocations.
+    The original code caused a 12.3 GiB array allocation with certain audio inputs.
     
     Args:
         wav: The raw waveform as a numpy array of floats.
@@ -117,18 +121,28 @@ def trim_long_silences(wav: np.ndarray) -> np.ndarray:
     Returns:
         np.ndarray: The waveform with long silences excised.
     """
-    # Use librosa to split audio into non-silent intervals
-    # top_db: The threshold (in decibels) below reference to consider as silence
-    # ref: The reference power. By default, it uses np.max.
-    intervals = librosa.effects.split(wav, top_db=20, frame_length=vad_window_length * int(sampling_rate / 1000), hop_length=int(vad_window_length/4 * sampling_rate / 1000))
-
-    # Concatenate the non-silent intervals
-    if len(intervals) > 0:
-        non_silent_wav = np.concatenate([wav[start:end] for start, end in intervals])
-        return non_silent_wav
-    else:
-        # If everything is silence, return original or empty? Return original to be safe.
-        warn("VAD detectecd entire audio as silence. Returning original.")
+    # Use smaller, more memory-efficient frame parameters
+    # Original was causing memory explosion with large frame_length
+    # Default librosa parameters: frame_length=2048, hop_length=512
+    # These are safe defaults that work well for speech
+    try:
+        intervals = librosa.effects.split(
+            wav, 
+            top_db=20,
+            frame_length=2048,  # Fixed safe value instead of calculated large value
+            hop_length=512      # Fixed safe value
+        )
+        
+        # Concatenate the non-silent intervals
+        if len(intervals) > 0:
+            non_silent_wav = np.concatenate([wav[start:end] for start, end in intervals])
+            return non_silent_wav
+        else:
+            warn("VAD detected entire audio as silence. Returning original.")
+            return wav
+    except MemoryError:
+        # Fallback: if still OOM, just return the original audio
+        warn("VAD caused memory error. Skipping silence trimming.")
         return wav
 
 

@@ -26,7 +26,7 @@ from synthesizer.models.modules import *
 from tensorflow_addons.seq2seq import dynamic_decode
 from synthesizer.models.architecture_wrappers import TacotronEncoderCell, TacotronDecoderCell
 from synthesizer.models.custom_decoder import CustomDecoder
-from synthesizer.models.attention import LocationSensitiveAttention
+from synthesizer.models.attention import Location_Sensitive_Attention
 
 import numpy as np
 
@@ -140,8 +140,7 @@ class Tacotron():
         gpus = ["/gpu:{}".format(i) for i in
                 range(hp.tacotron_gpu_start_idx, hp.tacotron_gpu_start_idx + hp.tacotron_num_gpus)]
         for i in range(hp.tacotron_num_gpus):
-            with tf.device(tf.compat.v1.train.replica_device_setter(ps_tasks=1, ps_device="/cpu:0",
-                                                                    worker_device=gpus[i])):
+            with tf.device(gpus[i]):
                 with tf.compat.v1.variable_scope("inference") as scope:
                     assert hp.tacotron_teacher_forcing_mode in ("constant", "scheduled")
                     if hp.tacotron_teacher_forcing_mode == "scheduled" and is_training:
@@ -181,61 +180,62 @@ class Tacotron():
                     
                     
                     # Decoder Parts
-                    # Attention Decoder Prenet
-                    prenet = Prenet(is_training, layers_sizes=hp.prenet_layers,
-                                    drop_rate=hp.tacotron_dropout_rate, scope="decoder_prenet")
-                    # Attention Mechanism
-                    attention_mechanism = LocationSensitiveAttention(hp.attention_dim,
-                                                                     encoder_cond_outputs, 
-                                                                     hparams=hp,
-                                                                     mask_encoder=hp.mask_encoder,
-                                                                     memory_sequence_length=tf.reshape(
-                                                                         tower_input_lengths[i],
-                                                                         [-1]),
-                                                                     smoothing=hp.smoothing,
-                                                                     cumulate_weights=hp.cumulative_weights)
-                    # Decoder LSTM Cells
-                    decoder_lstm = DecoderRNN(is_training, layers=hp.decoder_layers,
-                                              size=hp.decoder_lstm_units,
-                                              zoneout=hp.tacotron_zoneout_rate,
-                                              scope="decoder_LSTM")
-                    # Frames Projection layer
-                    frame_projection = FrameProjection(hp.num_mels * hp.outputs_per_step,
-                                                       scope="linear_transform_projection")
-                    # <stop_token> projection layer
-                    stop_projection = StopProjection(is_training or is_evaluating, shape=hp
-                                                     .outputs_per_step,
-                                                     scope="stop_token_projection")
-                    
-                    # Decoder Cell ==> [batch_size, decoder_steps, num_mels * r] (after decoding)
-                    decoder_cell = TacotronDecoderCell(
-                        prenet,
-                        attention_mechanism,
-                        decoder_lstm,
-                        frame_projection,
-                        stop_projection)
-                    
-                    # Define the helper for our decoder
-                    if is_training or is_evaluating or gta:
-                        self.helper = TacoTrainingHelper(batch_size, tower_mel_targets[i], hp, gta,
-                                                         is_evaluating, global_step)
-                    else:
-                        self.helper = TacoTestHelper(batch_size, hp)
-                    
-                    # initial decoder state
-                    decoder_init_state = decoder_cell.zero_state(batch_size=batch_size,
-                                                                 dtype=tf.float32)
-                    
-                    # Only use max iterations at synthesis time
-                    max_iters = hp.max_iters if not (is_training or is_evaluating) else None
-                    
-                    # Decode
-                    (frames_prediction, stop_token_prediction,
-                     _), final_decoder_state, _ = dynamic_decode(
-                        CustomDecoder(decoder_cell, self.helper, decoder_init_state),
-                        impute_finished=False,
-                        maximum_iterations=max_iters,
-                        swap_memory=hp.tacotron_swap_with_cpu)
+                    with tf.compat.v1.variable_scope("decoder") as decoder_scope:
+                        # Attention Decoder Prenet
+                        prenet = Prenet(is_training, layers_sizes=hp.prenet_layers,
+                                        drop_rate=hp.tacotron_dropout_rate, scope="decoder_prenet")
+                        # Attention Mechanism
+                        attention_mechanism = Location_Sensitive_Attention(hp.attention_dim,
+                                                                         encoder_cond_outputs, 
+                                                                         hparams=hp,
+                                                                         mask_encoder=hp.mask_encoder,
+                                                                         memory_sequence_length=tf.reshape(
+                                                                             tower_input_lengths[i],
+                                                                             [-1]),
+                                                                         smoothing=hp.smoothing,
+                                                                         cumulate_weights=hp.cumulative_weights)
+                        # Decoder LSTM Cells
+                        decoder_lstm = DecoderRNN(is_training, layers=hp.decoder_layers,
+                                                  size=hp.decoder_lstm_units,
+                                                  zoneout=hp.tacotron_zoneout_rate,
+                                                  scope="decoder_LSTM")
+                        # Frames Projection layer
+                        frame_projection = FrameProjection(hp.num_mels * hp.outputs_per_step,
+                                                           scope="linear_transform_projection")
+                        # <stop_token> projection layer
+                        stop_projection = StopProjection(is_training or is_evaluating, shape=hp
+                                                         .outputs_per_step,
+                                                         scope="stop_token_projection")
+                        
+                        # Decoder Cell ==> [batch_size, decoder_steps, num_mels * r] (after decoding)
+                        decoder_cell = TacotronDecoderCell(
+                            prenet,
+                            attention_mechanism,
+                            decoder_lstm,
+                            frame_projection,
+                            stop_projection)
+                        
+                        # Define the helper for our decoder
+                        if is_training or is_evaluating or gta:
+                            self.helper = TacoTrainingHelper(batch_size, tower_mel_targets[i], hp, gta,
+                                                             is_evaluating, global_step)
+                        else:
+                            self.helper = TacoTestHelper(batch_size, hp)
+                        
+                        # initial decoder state
+                        decoder_init_state = decoder_cell.zero_state(batch_size=batch_size,
+                                                                     dtype=tf.float32)
+                        
+                        # Only use max iterations at synthesis time
+                        max_iters = hp.max_iters if not (is_training or is_evaluating) else None
+                        
+                        # Decode
+                        (frames_prediction, stop_token_prediction,
+                         _), final_decoder_state, _ = dynamic_decode(
+                            CustomDecoder(decoder_cell, self.helper, decoder_init_state),
+                            impute_finished=False,
+                            maximum_iterations=max_iters,
+                            swap_memory=hp.tacotron_swap_with_cpu)
                     
                     # Reshape outputs to be one output per entry 
                     # ==> [batch_size, non_reduced_decoder_steps (decoder_steps * r), num_mels]
@@ -351,8 +351,7 @@ class Tacotron():
                 range(hp.tacotron_gpu_start_idx, hp.tacotron_gpu_start_idx + hp.tacotron_num_gpus)]
         
         for i in range(hp.tacotron_num_gpus):
-            with tf.device(tf.compat.v1.train.replica_device_setter(ps_tasks=1, ps_device="/cpu:0",
-                                                                    worker_device=gpus[i])):
+            with tf.device(gpus[i]):
                 with tf.compat.v1.variable_scope("loss") as scope:
                     if hp.mask_decoder:
                         # Compute loss of predictions before postnet
@@ -474,8 +473,7 @@ class Tacotron():
         # 2. Compute Gradient
         for i in range(hp.tacotron_num_gpus):
             #  Device placement
-            with tf.device(tf.compat.v1.train.replica_device_setter(ps_tasks=1, ps_device="/cpu:0",
-                                                                    worker_device=gpus[i])):
+            with tf.device(gpus[i]):
                 # agg_loss += self.tower_loss[i]
                 with tf.compat.v1.variable_scope("optimizer") as scope:
                     gradients = optimizer.compute_gradients(self.tower_loss[i])

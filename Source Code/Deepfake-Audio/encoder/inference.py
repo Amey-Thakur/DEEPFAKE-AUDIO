@@ -32,7 +32,6 @@ from matplotlib import cm
 
 # Internal Modules
 from encoder import audio
-from encoder.audio import preprocess_wav
 from encoder.model import SpeakerEncoder
 from encoder.params_data import (
     sampling_rate, mel_window_step, partials_n_frames
@@ -41,6 +40,14 @@ from encoder.params_data import (
 # Global State for the loaded model
 _model: Optional[SpeakerEncoder] = None
 _device: Optional[torch.device] = None
+
+
+def preprocess_wav(fpath_or_wav, source_sr=None):
+    """
+    Proxy function to allow calling preprocess_wav from the inference module.
+    See encoder.audio.preprocess_wav for documentation.
+    """
+    return audio.preprocess_wav(fpath_or_wav, source_sr)
 
 
 def load_model(weights_fpath: Path, device: Optional[Union[str, torch.device]] = None) -> None:
@@ -64,7 +71,7 @@ def load_model(weights_fpath: Path, device: Optional[Union[str, torch.device]] =
         _device = device
         
     _model = SpeakerEncoder(_device, torch.device("cpu"))
-    checkpoint = torch.load(weights_fpath, map_location=_device)
+    checkpoint = torch.load(weights_fpath, map_location=_device, weights_only=False)
     _model.load_state_dict(checkpoint["model_state"])
     _model.eval()
     

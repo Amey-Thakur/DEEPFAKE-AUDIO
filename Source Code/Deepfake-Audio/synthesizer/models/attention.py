@@ -76,7 +76,8 @@ def _location_sensitive_score(W_query, W_fil, W_keys):
 	"""
 	# Get the number of hidden units from the trailing dimension of keys
 	dtype = W_query.dtype
-	num_units = W_keys.shape[-1].value or array_ops.shape(W_keys)[-1]
+	_dim = W_keys.shape[-1]
+	num_units = (_dim.value if hasattr(_dim, "value") else _dim) or array_ops.shape(W_keys)[-1]
 
 	v_a = tf.compat.v1.get_variable(
 		"attention_variable_projection", shape=[num_units], dtype=dtype,
@@ -110,7 +111,7 @@ def _smoothing_normalization(e):
 	return tf.nn.sigmoid(e) / tf.reduce_sum(tf.nn.sigmoid(e), axis=-1, keepdims=True)
 
 
-class LocationSensitiveAttention(BahdanauAttention):
+class Location_Sensitive_Attention(BahdanauAttention):
 	"""Impelements Bahdanau-style (cumulative) scoring function.
 	Usually referred to as "hybrid" attention (content-based + location-based)
 	Extends the additive attention described in:
@@ -134,7 +135,7 @@ class LocationSensitiveAttention(BahdanauAttention):
 				 memory_sequence_length=None,
 				 smoothing=False,
 				 cumulate_weights=True,
-				 name="LocationSensitiveAttention"):
+				 name="Location_Sensitive_Attention"):
 		"""Construct the Attention mechanism.
 		Args:
 			num_units: The depth of the query mechanism.
@@ -164,10 +165,10 @@ class LocationSensitiveAttention(BahdanauAttention):
 		"""
 		#Create normalization function
 		#Setting it to None defaults in using softmax
-		normalization_function = _smoothing_normalization if (smoothing == True) else None
+		normalization_function = _smoothing_normalization if (smoothing == True) else "softmax"
 		memory_length = memory_sequence_length if (mask_encoder==True) else None
-		super(LocationSensitiveAttention, self).__init__(
-				num_units=num_units,
+		super(Location_Sensitive_Attention, self).__init__(
+				units=num_units,
 				memory=memory,
 				memory_sequence_length=memory_length,
 				probability_fn=normalization_function,
@@ -176,7 +177,7 @@ class LocationSensitiveAttention(BahdanauAttention):
 		self.location_convolution = tf.compat.v1.layers.Conv1D(filters=hparams.attention_filters,
 			kernel_size=hparams.attention_kernel, padding="same", use_bias=True,
 			bias_initializer=tf.zeros_initializer(), name="location_features_convolution")
-		self.location_layer = tf.compat.v1.layers.Dense(units=num_units, use_bias=False,
+		self.location_layer = tf.compat.v1.layers.Dense(num_units, use_bias=False,
 			dtype=tf.float32, name="location_features_layer")
 		self._cumulate = cumulate_weights
 
@@ -214,7 +215,7 @@ class LocationSensitiveAttention(BahdanauAttention):
 
 
 		# alignments shape = energy shape = [batch_size, max_time]
-		alignments = self._probability_fn(energy, previous_alignments)
+		alignments = self.probability_fn(energy, previous_alignments)
 
 		# Cumulate alignments
 		if self._cumulate:

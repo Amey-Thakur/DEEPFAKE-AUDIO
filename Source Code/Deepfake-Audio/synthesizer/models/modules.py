@@ -27,8 +27,8 @@ class HighwayNet:
         self.units = units
         self.scope = "HighwayNet" if name is None else name
         
-        self.H_layer = tf.compat.v1.layers.Dense(units=self.units, activation=tf.nn.relu, name="H")
-        self.T_layer = tf.compat.v1.layers.Dense(units=self.units, activation=tf.nn.sigmoid, name="T",
+        self.H_layer = tf.compat.v1.layers.Dense(self.units, activation=tf.nn.relu, name="H")
+        self.T_layer = tf.compat.v1.layers.Dense(self.units, activation=tf.nn.sigmoid, name="T",
                                        bias_initializer=tf.constant_initializer(-1.))
     
     def __call__(self, inputs):
@@ -52,6 +52,11 @@ class CBHG:
         self.scope = "CBHG" if name is None else name
         
         self.highway_units = highway_units
+        if projections[1] != highway_units:
+            self.input_projection = tf.compat.v1.layers.Dense(highway_units, name="dense")
+        else:
+            self.input_projection = None
+
         self.highwaynet_layers = [
             HighwayNet(highway_units, name="{}_highwaynet_{}".format(self.scope, i + 1)) for i in
             range(n_highwaynet_layers)]
@@ -74,7 +79,7 @@ class CBHG:
             
             # Maxpooling (dimension reduction, Using max instead of average helps finding "Edges" 
 			# in mels)
-            maxpool_output = tf.layers.max_pooling1d(
+            maxpool_output = tf.compat.v1.layers.max_pooling1d(
                 conv_outputs,
                 pool_size=self.pool_size,
                 strides=1,
@@ -91,8 +96,8 @@ class CBHG:
             
             # Additional projection in case of dimension mismatch (for HighwayNet "residual" 
 			# connection)
-            if highway_input.shape[2] != self.highway_units:
-                highway_input = tf.compat.v1.layers.Dense(highway_input, self.highway_units)
+            if self.input_projection is not None:
+                highway_input = self.input_projection(highway_input)
             
             # 4-layer HighwayNet
             for highwaynet in self.highwaynet_layers:
@@ -278,14 +283,18 @@ class Prenet:
         self.is_training = is_training
         
         self.scope = "prenet" if scope is None else scope
+
+        self.dense_layers = []
+        for i, size in enumerate(self.layers_sizes):
+            self.dense_layers.append(tf.compat.v1.layers.Dense(size, activation=self.activation,
+                                    name="dense_{}".format(i + 1)))
     
     def __call__(self, inputs):
         x = inputs
         
         with tf.compat.v1.variable_scope(self.scope):
-            for i, size in enumerate(self.layers_sizes):
-                dense = tf.compat.v1.layers.dense(x, units=size, activation=self.activation,
-                                        name="dense_{}".format(i + 1))
+            for i, dense_layer in enumerate(self.dense_layers):
+                dense = dense_layer(x)
                 # The paper discussed introducing diversity in generation at inference time
                 # by using a dropout of 0.5 only in prenet layers (in both training and inference).
                 x = tf.compat.v1.layers.dropout(dense, rate=self.drop_rate, training=True,
@@ -346,7 +355,7 @@ class FrameProjection:
         self.activation = activation
         
         self.scope = "Linear_projection" if scope is None else scope
-        self.dense = tf.compat.v1.layers.Dense(units=shape, activation=activation,
+        self.dense = tf.compat.v1.layers.Dense(shape, activation=activation,
                                      name="projection_{}".format(self.scope))
     
     def __call__(self, inputs):
@@ -379,11 +388,11 @@ class StopProjection:
         self.shape = shape
         self.activation = activation
         self.scope = "stop_token_projection" if scope is None else scope
+        self.dense_layer = tf.compat.v1.layers.Dense(self.shape, activation=None, name="projection_{}".format(self.scope))
     
     def __call__(self, inputs):
         with tf.compat.v1.variable_scope(self.scope):
-            output = tf.layers.dense(inputs, units=self.shape,
-                                     activation=None, name="projection_{}".format(self.scope))
+            output = self.dense_layer(inputs)
             
             # During training, don"t use activation as it is integrated inside the 
 			# sigmoid_cross_entropy loss function
