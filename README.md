@@ -128,7 +128,9 @@ DEEPFAKE-AUDIO/
 │   ├── 04_example_run_processing.png
 │   ├── 05_example_run_results.png
 │   ├── 06_example_run_results_footer.png
-│   └── 07_download_option.png
+│   ├── 07_download_option.png
+│   ├── Audio.wav                    # Sample Output
+│   └── favicon.png                  # Project Icon
 │
 ├── Source Code/                     # Primary Application Layer
 │   ├── app.py                       # Gradio Studio Interface
@@ -140,6 +142,7 @@ DEEPFAKE-AUDIO/
 │
 ├── .gitattributes                   # Signal Normalization
 ├── .gitignore                       # Deployment Exclusions
+├── DEEPFAKE-AUDIO.ipynb             # Research Notebook
 ├── SECURITY.md                      # Security Protocols
 ├── CITATION.cff                     # Academic Citation Manifest
 ├── codemeta.json                    # Metadata Standard
@@ -206,9 +209,9 @@ DEEPFAKE-AUDIO/
   <br>
   <i>Interactive verified output from the neural synthesis pipeline.</i>
   <br><br>
-  <a href="Dataset/samples/Elon Musk.wav"><img src="Source Code/favicon.png" alt="Audio Result" width="100"></a>
+  <a href="screenshots/Audio.wav"><img src="screenshots/favicon.png" alt="Audio Result" width="100"></a>
   <br>
-  <a href="Dataset/samples/Elon Musk.wav"><b>Listen to Generated Sample</b></a>
+  <a href="screenshots/Audio.wav"><b>Listen to Generated Sample</b></a>
 </div>
 
 ---
