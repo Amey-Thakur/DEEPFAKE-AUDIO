@@ -108,6 +108,12 @@ The classification engine is governed by strict **computational design patterns*
 ```python
 DEEPFAKE-AUDIO/
 │
+├── Dataset/                         # Neural Assets
+│   ├── samples/                     # Voice Reference Audio
+│   ├── encoder.pt                   # Speaker Verification Model
+│   ├── synthesizer.pt               # TTS Synthesis Model
+│   └── vocoder.pt                   # Waveform Reconstruction Model
+│
 ├── docs/                            # Academic Documentation
 │   └── SPECIFICATION.md             # Technical Architecture
 │
@@ -117,22 +123,20 @@ DEEPFAKE-AUDIO/
 │
 ├── screenshots/                     # Visual Gallery
 │   ├── 01_landing_page.png
-│   ├── 02_landing_page_ui.png
+│   ├── 02_landing_page_footer.png
 │   ├── 03_example_run_config.png
 │   ├── 04_example_run_processing.png
 │   ├── 05_example_run_results.png
-│   ├── 06_download_option.png
-│   ├── Audio.wav                    # Sample Output
-│   └── favicon.png                  # Project Icon
+│   ├── 06_example_run_results_footer.png
+│   └── 07_download_option.png
 │
 ├── Source Code/                     # Primary Application Layer
-│   ├── Deepfake-Audio/
-│   │   ├── app.py                   # Gradio Studio Interface
-│   │   ├── encoder/                 # Speaker Verification
-│   │   ├── synthesizer/             # TTS Synthesis
-│   │   ├── vocoder/                 # Waveform Reconstruction
-│   │   └── samples/                 # Predefined presets
-│   └── requirements.txt             # Dependency Manifest
+│   ├── app.py                       # Gradio Studio Interface
+│   ├── app_ui_demo.py               # UI-Only Verification Mode
+│   ├── Dockerfile                   # Containerization Config
+│   ├── requirements.txt             # Dependency Manifest
+│   ├── favicon.png                  # Application Icon
+│   └── intro_message.wav            # Audio Branding
 │
 ├── .gitattributes                   # Signal Normalization
 ├── .gitignore                       # Deployment Exclusions
@@ -148,7 +152,7 @@ DEEPFAKE-AUDIO/
 <a name="results"></a>
 ## Results
 
-<div align="center">
+  <div align="center">
   <b>Main Interface: Modern Design</b>
   <br>
   <i>Initial system state with clean aesthetics and synchronized brand identity.</i>
@@ -156,11 +160,11 @@ DEEPFAKE-AUDIO/
   <img src="screenshots/01_landing_page.png" alt="Landing Page" width="90%">
   <br><br><br>
 
-  <b>Interactive UI: Responsive Layout</b>
+  <b>Interactive Polish: Footer Integration</b>
   <br>
-  <i>Aesthetic HMI focused on accessibility and functional presentation.</i>
+  <i>Seamlessly integrated authorship and social persistence.</i>
   <br><br>
-  <img src="screenshots/02_landing_page_ui.png" alt="UI View" width="90%">
+  <img src="screenshots/02_landing_page_footer.png" alt="Footer UI" width="90%">
   <br><br><br>
 
   <b>Synthesis Setup: Adaptive Config</b>
@@ -184,20 +188,27 @@ DEEPFAKE-AUDIO/
   <img src="screenshots/05_example_run_results.png" alt="Results" width="90%">
   <br><br><br>
 
+  <b>Complete User Flow: Result & Footer</b>
+  <br>
+  <i>Comprehensive view of the post-synthesis state.</i>
+  <br><br>
+  <img src="screenshots/06_example_run_results_footer.png" alt="Results Footer" width="90%">
+  <br><br><br>
+
   <b>System Options: Audio Export</b>
   <br>
   <i>Exporting synthesized waveforms for downstream academic reference.</i>
   <br><br>
-  <img src="screenshots/06_download_option.png" alt="Download" width="90%">
+  <img src="screenshots/07_download_option.png" alt="Download" width="90%">
   <br><br><br>
 
   <b>Generated Result Output: Audio Signal</b>
   <br>
   <i>Interactive verified output from the neural synthesis pipeline.</i>
   <br><br>
-  <a href="screenshots/Audio.wav"><img src="screenshots/favicon.png" alt="Audio Result" width="100"></a>
+  <a href="Dataset/samples/Elon Musk.wav"><img src="Source Code/favicon.png" alt="Audio Result" width="100"></a>
   <br>
-  <a href="screenshots/Audio.wav"><b>Listen to Generated Sample</b></a>
+  <a href="Dataset/samples/Elon Musk.wav"><b>Listen to Generated Sample</b></a>
 </div>
 
 ---
