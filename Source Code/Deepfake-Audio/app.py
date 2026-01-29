@@ -119,17 +119,21 @@ def synthesize(audio_file, text, progress=gr.Progress()):
         progress(0.5, desc="Synthesizing Speech")
         specs = synthesizer.synthesize_spectrograms([text], [embed])
         
-        progress(0.8, desc="Generating Audio Waveform")
-        generated_wav = vocoder.infer_waveform(specs[0])
+        progress(0.8, desc="Generating High-Fidelity Audio")
+        # High Fidelity Generation: Larger target and overlap to reduce robotic artifacts
+        generated_wav = vocoder.infer_waveform(specs[0], batched=True, target=11000, overlap=1100)
         
         # Post-processing for High Fidelity
+        progress(0.85, desc="Removing Vocoder Noise")
+        generated_wav = vocoder.infer_denoised(generated_wav)
+        
         progress(0.9, desc="Refining Audio Quality")
         # 1. Trim leading/trailing silences using encoder's robust tools
         generated_wav = encoder.inference.preprocess_wav(generated_wav)
         
-        # 2. Peak Normalization to 0.97 for professional clarity
+        # 2. Peak Normalization to 0.98 for maximum richness without clipping
         if np.abs(generated_wav).max() > 0:
-            generated_wav = generated_wav / np.abs(generated_wav).max() * 0.97
+            generated_wav = generated_wav / np.abs(generated_wav).max() * 0.98
             
         generated_wav = np.pad(generated_wav, (0, synthesizer.sample_rate), mode="constant")
         
