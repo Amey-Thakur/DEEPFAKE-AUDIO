@@ -26,8 +26,36 @@
 *.pkl binary
 *.h5 binary
 
+# Standardized Git Attributes for Scholarly Archiving
+
+# Handle line endings automatically for files detected as text
+# and perform LF normalization on checkin.
+* text=auto eol=lf
+
+# Explicitly mark source files as text
+*.py text
+*.ipynb text
+*.md text
+*.txt text
+*.csv text
+*.json text
+*.yml text
+*.yaml text
+
+# Mark binary files
+*.wav binary
+*.mp3 binary
+*.flac binary
+*.jpg binary
+*.png binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.pkl binary
+*.h5 binary
+
 # Specific path attributes
-Source Code/Deepfake-Audio/samples/*.wav binary
+"Source Code/Deepfake-Audio/samples/*.wav" binary
 
 # Academic/Scholarly classification
 *.md linguist-documentation
