@@ -39,6 +39,7 @@ Desktop.ini
 *.toc
 *.wav
 !Source Code/Deepfake-Audio/samples/*.wav
+!screenshots/*.wav
 *.sh
 
 # Checkpoints
