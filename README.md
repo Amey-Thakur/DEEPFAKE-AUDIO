@@ -89,8 +89,8 @@ The classification engine is governed by strict **computational design patterns*
 - **Languages**: Python 3.9+
 - **Logic**: **Neural Pipelines** (SV2TTS & Signal Processing)
 - **Frameworks**: **PyTorch** & **TensorFlow** (Inference)
-- **UI System**: Premium Design (Gradio & Custom CSS)
-- **Deployment**: Local execution / Hugging Face Spaces (Planned)
+- **UI System**: Modern Design (Gradio & Custom CSS)
+- **Deployment**: Local execution / Hugging Face Spaces
 - **Architecture**: Progressive Web App (PWA)
 
 ---
@@ -145,14 +145,14 @@ DEEPFAKE-AUDIO/
 <div align="center">
   <b>Main Interface: Modern Design</b>
   <br>
-  <i>Initial system state with premium aesthetics and synchronized brand identity.</i>
+  <i>Initial system state with clean aesthetics and synchronized brand identity.</i>
   <br><br>
   <img src="screenshots/01_landing_page.png" alt="Landing Page" width="90%">
   <br><br><br>
 
   <b>Interactive UI: Responsive Layout</b>
   <br>
-  <i>Aesthetic HMI focused on accessibility and scholarly presentation.</i>
+  <i>Aesthetic HMI focused on accessibility and functional presentation.</i>
   <br><br>
   <img src="screenshots/02_landing_page_ui.png" alt="UI View" width="90%">
   <br><br><br>
