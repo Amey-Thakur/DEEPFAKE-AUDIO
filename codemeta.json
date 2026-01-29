@@ -1,0 +1,37 @@
+{
+    "@context": "https://doi.org/10.5063/schema/codemeta-2.0",
+    "@type": "SoftwareSourceCode",
+    "name": "Deepfake Audio",
+    "description": "An implementation of Transfer Learning from Speaker Verification to Multispeaker Text-To-Speech Synthesis (SV2TTS), utilizing a real-time vocoder for high-fidelity audio synthesis.",
+    "identifier": "DEEPFAKE-AUDIO",
+    "license": "https://spdx.org/licenses/MIT.html",
+    "programmingLanguage": [
+        "Python",
+        "Deep Learning"
+    ],
+    "author": [
+        {
+            "@type": "Person",
+            "givenName": "Amey",
+            "familyName": "Thakur",
+            "id": "https://orcid.org/0000-0001-5644-1575"
+        },
+        {
+            "@type": "Person",
+            "givenName": "Mega",
+            "familyName": "Satish",
+            "id": "https://orcid.org/0000-0002-1844-9557"
+        }
+    ],
+    "dateReleased": "2021-02-06",
+    "codeRepository": "https://github.com/Amey-Thakur/DEEPFAKE-AUDIO",
+    "developmentStatus": "complete",
+    "applicationCategory": "Audio Synthesis / Deep Learning",
+    "keywords": [
+        "Deepfake Audio",
+        "Voice Cloning",
+        "SV2TTS",
+        "Deep Learning",
+        "Text-to-Speech"
+    ]
+}
