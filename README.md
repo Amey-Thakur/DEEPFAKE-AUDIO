@@ -10,12 +10,12 @@
 
   An advanced neural voice synthesis platform implementing Transfer Learning from Speaker Verification to Multispeaker Text-To-Speech Synthesis (SV2TTS) for high-fidelity zero-shot voice cloning.
 
-  **[Source Code](Source%20Code/Deepfake-Audio/)** &nbsp;·&nbsp; **[Technical Specification](docs/SPECIFICATION.md)** &nbsp;·&nbsp; **[Video Demo](https://youtu.be/i3wnBcbHDbs)** &nbsp;·&nbsp; **[Live Demo]()**
+  **[Source Code](Source%20Code/Deepfake-Audio/)** &nbsp;·&nbsp; **[Technical Specification](docs/SPECIFICATION.md)** &nbsp;·&nbsp; **[Video Demo](https://youtu.be/i3wnBcbHDbs)** &nbsp;·&nbsp; **[Live Demo](https://huggingface.co/spaces/ameythakur/Deepfake-Audio)**
 
   <br>
 
   <a href="https://youtu.be/i3wnBcbHDbs">
-    <img src="https://img.youtube.com/vi/i3wnBcbHDbs/maxresdefault.jpg" alt="Video Demo" width="70%">
+    <img src="https://img.youtube.com/vi/i3wnBcbHDbs/hqdefault.jpg" alt="Video Demo" width="70%">
   </a>
 
 </div>
@@ -310,7 +310,7 @@ Special thanks to the **mentors and peers** whose encouragement, discussions, an
 
   <br>
 
-  🧠 **[Deepfake Audio]()**
+  🧠 **[Deepfake Audio](https://huggingface.co/spaces/ameythakur/Deepfake-Audio)**
 
   ---
 
