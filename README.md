@@ -12,6 +12,12 @@
 
   **[Source Code](Source%20Code/Deepfake-Audio/)** &nbsp;·&nbsp; **[Technical Specification](docs/SPECIFICATION.md)** &nbsp;·&nbsp; **[Live Demo]()**
 
+  <br>
+
+  <a href="https://youtu.be/i3wnBcbHDbs">
+    <img src="https://img.youtube.com/vi/i3wnBcbHDbs/maxresdefault.jpg" alt="Video Demo" width="70%">
+  </a>
+
 </div>
 
 ---
