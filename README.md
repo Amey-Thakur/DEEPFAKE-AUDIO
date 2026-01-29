@@ -310,7 +310,7 @@ Special thanks to the **mentors and peers** whose encouragement, discussions, an
 
   <br>
 
-  🧠 **[Deepfake Audio](https://huggingface.co/spaces/ameythakur/Deepfake-Audio)**
+  🎙️ **[Deepfake Audio](https://huggingface.co/spaces/ameythakur/Deepfake-Audio)**
 
   ---
 
