@@ -1,7 +1,7 @@
 """
 Deepfake Audio - CLI Demonstration Script
 -----------------------------------------
-A demonstration script for the Deepfake Audio project, implementing a
+A demonstration script for the Deepfake Audio Studio, implementing a
 command-line interface (CLI) for the Real-Time Voice Cloning framework.
 
 This script integrates the comprehensive pipeline:

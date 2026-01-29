@@ -691,7 +691,7 @@ with gr.Blocks(title="Deepfake Audio Studio", theme=theme, css=custom_css, js=cu
                 <a href='https://github.com/Amey-Thakur/DEEPFAKE-AUDIO' target='_blank'>GitHub Repository</a> | 
                 <a href='https://youtu.be/i3wnBcbHDbs' target='_blank'>YouTube Demo</a>
             </div>
-            <p style='margin-top: 12px; opacity: 0.6;'>© 2021 Deepfake Audio Project</p>
+            <p style='margin-top: 12px; opacity: 0.6;'>© 2021 Deepfake Audio Studio</p>
             """)
 
     # Events
