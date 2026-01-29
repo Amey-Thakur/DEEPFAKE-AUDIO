@@ -161,6 +161,8 @@ DEEPFAKE-AUDIO/
   <i>Initial system state with clean aesthetics and synchronized brand identity.</i>
   <br><br>
   <img src="screenshots/01_landing_page.png" alt="Landing Page" width="90%">
+  <br>
+  <sub><i>💡 <b>Interactive Element:</b> Engage the title header to activate the system's auditory introduction.</i></sub>
   <br><br><br>
 
   <b>Interactive Polish: Footer Integration</b>
