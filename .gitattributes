@@ -15,16 +15,19 @@
 *.yaml text
 
 # Mark binary files
+*.wav binary
+*.mp3 binary
+*.flac binary
 *.jpg binary
 *.png binary
 *.gif binary
 *.ico binary
 *.pdf binary
-*.wav binary
-*.mp3 binary
-*.flac binary
 *.pkl binary
 *.h5 binary
+
+# Specific path attributes
+Source Code/Deepfake-Audio/samples/*.wav binary
 
 # Academic/Scholarly classification
 *.md linguist-documentation
