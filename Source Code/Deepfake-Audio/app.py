@@ -722,4 +722,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     print(f"Launching Studio on port {args.port}...")
-    demo.queue().launch(server_name="0.0.0.0", server_port=args.port, show_error=True)
+    demo.queue().launch(server_name="0.0.0.0", server_port=args.port, show_error=True, pwa=True)
