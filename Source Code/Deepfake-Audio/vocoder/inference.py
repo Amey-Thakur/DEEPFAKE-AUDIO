@@ -103,3 +103,12 @@ def infer_waveform(mel: np.ndarray, normalize: bool = True,  batched: bool = Tru
     mel = torch.from_numpy(mel[None, ...])
     wav = _model.generate(mel, batched, target, overlap, hp.mu_law, progress_callback)
     return wav
+
+def infer_denoised(wav: np.ndarray) -> np.ndarray:
+    """
+    Applies bias-based denoising to the generated waveform.
+    """
+    from vocoder.denoiser import denoise
+    if _model is None:
+        raise Exception("Model not loaded")
+    return denoise(wav, _model, _device)
