@@ -1,4 +1,4 @@
-# Technical Specification: Deepfake Audio Studio
+# Technical Specification: Deepfake Audio
 
 ## Architectural Overview
 
