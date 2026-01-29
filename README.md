@@ -10,7 +10,7 @@
 
   An advanced neural voice synthesis platform implementing Transfer Learning from Speaker Verification to Multispeaker Text-To-Speech Synthesis (SV2TTS) for high-fidelity zero-shot voice cloning.
 
-  **[Source Code](Source%20Code/Deepfake-Audio/)** &nbsp;·&nbsp; **[Technical Specification](docs/SPECIFICATION.md)** &nbsp;·&nbsp; **[Live Demo]()**
+  **[Source Code](Source%20Code/Deepfake-Audio/)** &nbsp;·&nbsp; **[Technical Specification](docs/SPECIFICATION.md)** &nbsp;·&nbsp; **[Video Demo](https://youtu.be/i3wnBcbHDbs)** &nbsp;·&nbsp; **[Live Demo]()**
 
   <br>
 
