@@ -2,7 +2,7 @@
 
 ## Architectural Overview
 
-**Deepfake Audio Studio** is a multi-stage neural voice synthesis architecture designed to clone speaker identities and generate high-fidelity speech from textual input. The system utilizes a Transfer Learning framework known as **SV2TTS** (Speaker Verification to Multispeaker Text-To-Speech Synthesis), integrating three distinct deep learning components to achieve zero-shot voice cloning.
+**Deepfake Audio** is a multi-stage neural voice synthesis architecture designed to clone speaker identities and generate high-fidelity speech from textual input. The system utilizes a Transfer Learning framework known as **SV2TTS** (Speaker Verification to Multispeaker Text-To-Speech Synthesis), integrating three distinct deep learning components to achieve zero-shot voice cloning.
 
 ### Neural Pipeline Flow
 
@@ -33,7 +33,7 @@ graph TD
 
 ### 3. Deployment Pipeline
 -   **Local Runtime**: Optimized for execution on **Python 3.9+** with Torch/TensorFlow backends, supporting both CPU and GPU-accelerated inference.
--   **Progressive Web App**: The studio is configured as a **PWA**, enabling native-like installation on desktop and mobile platforms for an integrated user experience.
+-   **Progressive Web App**: The application is configured as a **PWA**, enabling native-like installation on desktop and mobile platforms for an integrated user experience.
 
 ---
 
