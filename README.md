@@ -263,14 +263,27 @@ source venv/bin/activate
 #### Step 3: Install Core Dependencies
 Ensure your environment is active, then install the required libraries:
 ```bash
-pip install -r "Source Code/Deepfake-Audio/requirements.txt"
+pip install -r "Source Code/requirements.txt"
 ```
 
 ### 3. Execution
-Launch the primary Gradio-based studio engine:
 
+#### A. Interactive Web Studio (PWA)
+Launch the primary Gradio-based studio engine:
 ```bash
-python "Source Code/Deepfake-Audio/app.py"
+python "Source Code/app.py"
+```
+> [!TIP]
+> **PWA Installation**: Once the studio is running, you can click the "Install" icon in your browser's address bar to add the **Deepfake Audio Studio** to your desktop as a standalone application.
+
+#### B. Research & Automation Script
+For automated synthesis or command-line research workflows:
+```bash
+# Example: Using a preset identity
+python DEEPFAKE-AUDIO.py --preset "Steve Jobs.wav" --text "Neural cloning active."
+
+# Example: Using a custom voice file
+python DEEPFAKE-AUDIO.py --input "my_voice.wav" --text "Synthesizing new speech."
 ```
 
 ---
