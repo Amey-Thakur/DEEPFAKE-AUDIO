@@ -1,0 +1,23 @@
+{
+    "name": "Deepfake Audio Studio",
+    "short_name": "Deepfake Studio",
+    "description": "A neural voice cloning studio powered by SV2TTS technology",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#0a192f",
+    "theme_color": "#ff8c00",
+    "icons": [
+        {
+            "src": "/file=favicon.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/file=favicon.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ]
+}
