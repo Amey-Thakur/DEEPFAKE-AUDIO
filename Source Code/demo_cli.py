@@ -1,12 +1,41 @@
+# ==================================================================================================
+# DEEPFAKE AUDIO - demo_cli.py (Command Line Entry)
+# ==================================================================================================
+# 
+# 📝 DESCRIPTION
+# This script provides a terminal-based interface to the Deepfake Audio synthesis pipeline.
+# It is designed for researchers and developers who require a GUI-less environment to 
+# perform batch inference, integration testing, or low-level parameter exploration 
+# of the Speaker Verification to Transfer Learning (SV2TTS) system.
+#
+# 👤 AUTHORS
+# - Amey Thakur (https://github.com/Amey-Thakur)
+# - Mega Satish (https://github.com/msatmod)
+#
+# 🤝🏻 CREDITS
+# Original Real-Time Voice Cloning methodology by CorentinJ
+# Repository: https://github.com/CorentinJ/Real-Time-Voice-Cloning
+#
+# 🔗 PROJECT LINKS
+# Repository: https://github.com/Amey-Thakur/DEEPFAKE-AUDIO
+# Video Demo: https://youtu.be/i3wnBcbHDbs
+# Research: https://github.com/Amey-Thakur/DEEPFAKE-AUDIO/blob/main/DEEPFAKE-AUDIO.ipynb
+#
+# 📜 LICENSE
+# Released under the MIT License
+# Release Date: 2021-02-06
+# ==================================================================================================
+
 import argparse
 import os
 from pathlib import Path
-
 import librosa
 import numpy as np
 import soundfile as sf
 import torch
 
+# --- INTERNAL ARCHITECTURE ---
+# These modules encapsulate the multi-stage neural logic.
 from encoder import inference as encoder
 from encoder.params_model import model_embedding_size as speaker_embedding_size
 from synthesizer.inference import Synthesizer

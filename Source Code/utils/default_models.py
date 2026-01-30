@@ -1,3 +1,30 @@
+# ==================================================================================================
+# DEEPFAKE AUDIO - utils/default_models.py (Pre-trained Asset Management)
+# ==================================================================================================
+# 
+# 📝 DESCRIPTION
+# This module manages the lifecycle of the default pre-trained neural weights for the 
+# encoder, synthesizer, and vocoder. it ensures that the necessary model assets are 
+# synchronized from the Hugging Face hub and verified for integrity before execution.
+#
+# 👤 AUTHORS
+# - Amey Thakur (https://github.com/Amey-Thakur)
+# - Mega Satish (https://github.com/msatmod)
+#
+# 🤝🏻 CREDITS
+# Original Real-Time Voice Cloning methodology by CorentinJ
+# Repository: https://github.com/CorentinJ/Real-Time-Voice-Cloning
+#
+# 🔗 PROJECT LINKS
+# Repository: https://github.com/Amey-Thakur/DEEPFAKE-AUDIO
+# Video Demo: https://youtu.be/i3wnBcbHDbs
+# Research: https://github.com/Amey-Thakur/DEEPFAKE-AUDIO/blob/main/DEEPFAKE-AUDIO.ipynb
+#
+# 📜 LICENSE
+# Released under the MIT License
+# Release Date: 2021-02-06
+# ==================================================================================================
+
 from pathlib import Path
 
 from huggingface_hub import hf_hub_download

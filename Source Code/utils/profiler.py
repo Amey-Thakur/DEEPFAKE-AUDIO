@@ -1,3 +1,31 @@
+# ==================================================================================================
+# DEEPFAKE AUDIO - utils/profiler.py (Diagnostic Performance Telemetry)
+# ==================================================================================================
+# 
+# 📝 DESCRIPTION
+# This module provides low-overhead execution timing and performance telemetry 
+# utilities. It is used throughout the pipeline to monitor the average latency 
+# of neural inference stages, enabling researchers to identify computational 
+# bottlenecks in real-time.
+#
+# 👤 AUTHORS
+# - Amey Thakur (https://github.com/Amey-Thakur)
+# - Mega Satish (https://github.com/msatmod)
+#
+# 🤝🏻 CREDITS
+# Original Real-Time Voice Cloning methodology by CorentinJ
+# Repository: https://github.com/CorentinJ/Real-Time-Voice-Cloning
+#
+# 🔗 PROJECT LINKS
+# Repository: https://github.com/Amey-Thakur/DEEPFAKE-AUDIO
+# Video Demo: https://youtu.be/i3wnBcbHDbs
+# Research: https://github.com/Amey-Thakur/DEEPFAKE-AUDIO/blob/main/DEEPFAKE-AUDIO.ipynb
+#
+# 📜 LICENSE
+# Released under the MIT License
+# Release Date: 2021-02-06
+# ==================================================================================================
+
 from time import perf_counter as timer
 from collections import OrderedDict
 import numpy as np

@@ -1,8 +1,42 @@
+# ==================================================================================================
+# DEEPFAKE AUDIO - app.py (The Studio Interface)
+# ==================================================================================================
+# 
+# 📝 DESCRIPTION
+# This is the primary entry point for the Deepfake Audio Studio. It implements a modern,
+# high-performance Gradio-based web interface designed to facilitate zero-shot voice cloning
+# using the SV2TTS (Speaker Verification to Transfer Learning) framework.
+# 
+# The application is architected for "Graceful Degradation": if AI models or hardware-level 
+# dependencies (like TensorFlow/CUDA) are unavailable, it falls back to a "UI-Only Demo Mode" 
+# to preserve the accessibility of the research documentation.
+#
+# 👤 AUTHORS
+# - Amey Thakur (https://github.com/Amey-Thakur)
+# - Mega Satish (https://github.com/msatmod)
+#
+# 🤝🏻 CREDITS
+# Original Real-Time Voice Cloning methodology by CorentinJ
+# Repository: https://github.com/CorentinJ/Real-Time-Voice-Cloning
+#
+# 🔗 PROJECT LINKS
+# Repository: https://github.com/Amey-Thakur/DEEPFAKE-AUDIO
+# Video Demo: https://youtu.be/i3wnBcbHDbs
+# Demo: https://huggingface.co/spaces/ameythakur/Deepfake-Audio
+# Research: https://github.com/Amey-Thakur/DEEPFAKE-AUDIO/blob/main/DEEPFAKE-AUDIO.ipynb
+#
+# 📜 LICENSE
+# Released under the MIT License
+# Release Date: 2021-02-06
+# ==================================================================================================
+
 import os
 import sys
 from pathlib import Path
 
-# Absolute Silence: Configure environment before any library imports
+# --- SYSTEM INITIALIZATION ---
+# We configure the environment variables early to suppress verbose C++ logs from TensorFlow,
+# ensuring a clean terminal output focus on the application state.
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 os.environ['PYTHONWARNINGS'] = 'ignore'
 
@@ -13,21 +47,27 @@ import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# --- Directory Setup ---
+# --- ARCHITECTURAL DIRECTORIES ---
+# Establish absolute paths to ensure the application resolves assets correctly regardless of 
+# the execution context (Source Code vs Docker vs Cloud).
 PROJ_DIR = Path(__file__).parent.absolute()
 ROOT_DIR = PROJ_DIR.parent
 DATASET_DIR = ROOT_DIR / "Dataset"
 SAMPLES_DIR = DATASET_DIR / "samples"
 
+# Inject current directory into sys.path to allow internal module resolution for encoder/synthesizer.
 if str(PROJ_DIR) not in sys.path:
     sys.path.insert(0, str(PROJ_DIR))
 
-# --- Core Imports (Always Available) ---
 import numpy as np
 import gradio as gr
 import base64
 
-# --- Optional AI Core Imports (Graceful Degradation) ---
+# --- AI ENGINE DEPENDENCIES ---
+# The application attempts to load the multi-stage neural pipeline.
+# Stage 1: Encoder (Speaker Verification)
+# Stage 2: Synthesizer (Tacotron 2)
+# Stage 3: Vocoder (WaveRNN)
 TF_AVAILABLE = False
 MODELS_READY = False
 STARTUP_ERROR = ""
@@ -38,19 +78,20 @@ try:
     LIBROSA_AVAILABLE = True
 except ImportError:
     LIBROSA_AVAILABLE = False
-    logger.warning("librosa not available")
+    logger.warning("librosa not available - audio loading will fail.")
 
 try:
-    # Try to import TensorFlow - may be blocked by Application Control
+    # TensorFlow 2.x requires eager execution to be disabled for legacy SV2TTS support elements.
     import tensorflow as tf
     tf.compat.v1.disable_eager_execution()
     tf.get_logger().setLevel('ERROR')
     TF_AVAILABLE = True
 except Exception as e:
-    logger.warning(f"TensorFlow unavailable: {e}")
+    logger.warning(f"TensorFlow unavailable (possibly blocked by policy): {e}")
     TF_AVAILABLE = False
 
 try:
+    # Import the cloned submodules. They must exist in the PROJ_DIR.
     import encoder.inference
     import encoder.audio
     from synthesizer.inference import Synthesizer

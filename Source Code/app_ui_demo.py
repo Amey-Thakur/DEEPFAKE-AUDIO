@@ -1,11 +1,37 @@
-"""
-UI-Only Launcher for Deepfake Audio Studio
-This version runs without TensorFlow/AI models for UI verification only.
-"""
+# ==================================================================================================
+# DEEPFAKE AUDIO - app_ui_demo.py (The UI Sandbox)
+# ==================================================================================================
+# 
+# 📝 DESCRIPTION
+# This script serves as a lightweight, "UI-Only" verification environment for the Deepfake 
+# Audio Studio. It is designed to run without the heavy neural dependencies (TensorFlow, PyTorch)
+# used in the production pipeline, allowing designers and developers to iterate on the 
+# Human-Machine Interface (HMI) aesthetics without loading massive model weights.
+#
+# 👤 AUTHORS
+# - Amey Thakur (https://github.com/Amey-Thakur)
+# - Mega Satish (https://github.com/msatmod)
+#
+# 🤝🏻 CREDITS
+# Original Real-Time Voice Cloning methodology by CorentinJ
+# Repository: https://github.com/CorentinJ/Real-Time-Voice-Cloning
+#
+# 🔗 PROJECT LINKS
+# Repository: https://github.com/Amey-Thakur/DEEPFAKE-AUDIO
+# Video Demo: https://youtu.be/i3wnBcbHDbs
+# Research: https://github.com/Amey-Thakur/DEEPFAKE-AUDIO/blob/main/DEEPFAKE-AUDIO.ipynb
+#
+# 📜 LICENSE
+# Released under the MIT License
+# Release Date: 2021-02-06
+# ==================================================================================================
+
 import os
 import sys
 from pathlib import Path
 
+# --- ENVIRONMENT CONFIGURATION ---
+# We suppress lower-level system warnings to ensure the focus remains on the HMI presentation.
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 os.environ['PYTHONWARNINGS'] = 'ignore'
 
@@ -16,7 +42,11 @@ import numpy as np
 import gradio as gr
 import base64
 
+# --- DIRECTORY ARCHITECTURE ---
 PROJ_DIR = Path(__file__).parent.absolute()
+ROOT_DIR = PROJ_DIR.parent
+DATASET_DIR = ROOT_DIR / "Dataset"
+SAMPLES_DIR = DATASET_DIR / "samples"
 
 # --- Sample Loading (Dynamic Discovery) ---
 ROOT_DIR = PROJ_DIR.parent

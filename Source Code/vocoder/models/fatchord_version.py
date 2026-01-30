@@ -1,3 +1,32 @@
+# ==================================================================================================
+# DEEPFAKE AUDIO - vocoder/models/fatchord_version.py (WaveRNN Architecture)
+# ==================================================================================================
+# 
+# 📝 DESCRIPTION
+# This module implements the "Fatchord" variant of WaveRNN. It utilizes 
+# upsampling networks, residual Mel-ResNets, and a dual-GRU recurrent core 
+# to synthesize waveforms from Mel-Spectrograms. It supports both RAW 
+# (softmax) and MOL (Logistic Mixture) output modes.
+#
+# 👤 AUTHORS
+# - Amey Thakur (https://github.com/Amey-Thakur)
+# - Mega Satish (https://github.com/msatmod)
+#
+# 🤝🏻 CREDITS
+# Original Real-Time Voice Cloning methodology by CorentinJ
+# Repository: https://github.com/CorentinJ/Real-Time-Voice-Cloning
+# Fatchord WaveRNN original implementation reference
+#
+# 🔗 PROJECT LINKS
+# Repository: https://github.com/Amey-Thakur/DEEPFAKE-AUDIO
+# Video Demo: https://youtu.be/i3wnBcbHDbs
+# Research: https://github.com/Amey-Thakur/DEEPFAKE-AUDIO/blob/main/DEEPFAKE-AUDIO.ipynb
+#
+# 📜 LICENSE
+# Released under the MIT License
+# Release Date: 2021-02-06
+# ==================================================================================================
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -5,8 +34,8 @@ from vocoder.distribution import sample_from_discretized_mix_logistic
 from vocoder.display import *
 from vocoder.audio import *
 
-
 class ResBlock(nn.Module):
+    """Neural Backbone: Implements a 1D residual block with batch normalization."""
     def __init__(self, dims):
         super().__init__()
         self.conv1 = nn.Conv1d(dims, dims, kernel_size=1, bias=False)
@@ -16,35 +45,30 @@ class ResBlock(nn.Module):
 
     def forward(self, x):
         residual = x
-        x = self.conv1(x)
-        x = self.batch_norm1(x)
-        x = F.relu(x)
-        x = self.conv2(x)
-        x = self.batch_norm2(x)
+        x = F.relu(self.batch_norm1(self.conv1(x)))
+        x = self.batch_norm2(self.conv2(x))
         return x + residual
 
-
 class MelResNet(nn.Module):
+    """
+    Feature Refinement:
+    Applies a series of residual blocks to refine Mel-Spectrogram features.
+    """
     def __init__(self, res_blocks, in_dims, compute_dims, res_out_dims, pad):
         super().__init__()
         k_size = pad * 2 + 1
         self.conv_in = nn.Conv1d(in_dims, compute_dims, kernel_size=k_size, bias=False)
         self.batch_norm = nn.BatchNorm1d(compute_dims)
-        self.layers = nn.ModuleList()
-        for i in range(res_blocks):
-            self.layers.append(ResBlock(compute_dims))
+        self.layers = nn.ModuleList([ResBlock(compute_dims) for _ in range(res_blocks)])
         self.conv_out = nn.Conv1d(compute_dims, res_out_dims, kernel_size=1)
 
     def forward(self, x):
-        x = self.conv_in(x)
-        x = self.batch_norm(x)
-        x = F.relu(x)
+        x = F.relu(self.batch_norm(self.conv_in(x)))
         for f in self.layers: x = f(x)
-        x = self.conv_out(x)
-        return x
-
+        return self.conv_out(x)
 
 class Stretch2d(nn.Module):
+    """Signal Expansion: Nearest-neighbor upsampling for 2D tensors."""
     def __init__(self, x_scale, y_scale):
         super().__init__()
         self.x_scale = x_scale
@@ -56,10 +80,12 @@ class Stretch2d(nn.Module):
         x = x.repeat(1, 1, 1, self.y_scale, 1, self.x_scale)
         return x.view(b, c, h * self.y_scale, w * self.x_scale)
 
-
 class UpsampleNetwork(nn.Module):
-    def __init__(self, feat_dims, upsample_scales, compute_dims,
-                 res_blocks, res_out_dims, pad):
+    """
+    Temporal Pyramid:
+    Upsamples Mel-Spectrogram features to match the audio sampling resolution.
+    """
+    def __init__(self, feat_dims, upsample_scales, compute_dims, res_blocks, res_out_dims, pad):
         super().__init__()
         total_scale = np.cumprod(upsample_scales)[-1]
         self.indent = pad * total_scale
@@ -72,33 +98,28 @@ class UpsampleNetwork(nn.Module):
             stretch = Stretch2d(scale, 1)
             conv = nn.Conv2d(1, 1, kernel_size=k_size, padding=padding, bias=False)
             conv.weight.data.fill_(1. / k_size[1])
-            self.up_layers.append(stretch)
-            self.up_layers.append(conv)
+            self.up_layers.extend([stretch, conv])
 
     def forward(self, m):
         aux = self.resnet(m).unsqueeze(1)
-        aux = self.resnet_stretch(aux)
-        aux = aux.squeeze(1)
+        aux = self.resnet_stretch(aux).squeeze(1)
         m = m.unsqueeze(1)
         for f in self.up_layers: m = f(m)
         m = m.squeeze(1)[:, :, self.indent:-self.indent]
         return m.transpose(1, 2), aux.transpose(1, 2)
 
-
 class WaveRNN(nn.Module):
+    """
+    Neural Orchestration:
+    Primary class for the WaveRNN vocoder, managing upsampling and recurrent generation.
+    """
     def __init__(self, rnn_dims, fc_dims, bits, pad, upsample_factors,
                  feat_dims, compute_dims, res_out_dims, res_blocks,
                  hop_length, sample_rate, mode='RAW'):
         super().__init__()
         self.mode = mode
         self.pad = pad
-        if self.mode == 'RAW' :
-            self.n_classes = 2 ** bits
-        elif self.mode == 'MOL' :
-            self.n_classes = 30
-        else :
-            RuntimeError("Unknown model mode value - ", self.mode)
-
+        self.n_classes = 2 ** bits if mode == 'RAW' else 30
         self.rnn_dims = rnn_dims
         self.aux_dims = res_out_dims // 4
         self.hop_length = hop_length
@@ -116,55 +137,44 @@ class WaveRNN(nn.Module):
         self.num_params()
 
     def forward(self, x, mels):
+        """Neural Training Step: Process a batch of audio sequences."""
         self.step += 1
         bsize = x.size(0)
-        if torch.cuda.is_available():
-            h1 = torch.zeros(1, bsize, self.rnn_dims).cuda()
-            h2 = torch.zeros(1, bsize, self.rnn_dims).cuda()
-        else:
-            h1 = torch.zeros(1, bsize, self.rnn_dims).cpu()
-            h2 = torch.zeros(1, bsize, self.rnn_dims).cpu()
+        device = x.device
+        h1 = torch.zeros(1, bsize, self.rnn_dims).to(device)
+        h2 = torch.zeros(1, bsize, self.rnn_dims).to(device)
+        
         mels, aux = self.upsample(mels)
 
         aux_idx = [self.aux_dims * i for i in range(5)]
-        a1 = aux[:, :, aux_idx[0]:aux_idx[1]]
-        a2 = aux[:, :, aux_idx[1]:aux_idx[2]]
-        a3 = aux[:, :, aux_idx[2]:aux_idx[3]]
-        a4 = aux[:, :, aux_idx[3]:aux_idx[4]]
+        a1, a2, a3, a4 = (aux[:, :, aux_idx[i]:aux_idx[i+1]] for i in range(4))
 
-        x = torch.cat([x.unsqueeze(-1), mels, a1], dim=2)
-        x = self.I(x)
+        x = self.I(torch.cat([x.unsqueeze(-1), mels, a1], dim=2))
         res = x
         x, _ = self.rnn1(x, h1)
 
         x = x + res
         res = x
-        x = torch.cat([x, a2], dim=2)
-        x, _ = self.rnn2(x, h2)
+        x, _ = self.rnn2(torch.cat([x, a2], dim=2), h2)
 
-        x = x + res
-        x = torch.cat([x, a3], dim=2)
-        x = F.relu(self.fc1(x))
-
-        x = torch.cat([x, a4], dim=2)
-        x = F.relu(self.fc2(x))
+        x = F.relu(self.fc1(torch.cat([x+res, a3], dim=2)))
+        x = F.relu(self.fc2(torch.cat([x, a4], dim=2)))
         return self.fc3(x)
 
     def generate(self, mels, batched, target, overlap, mu_law, progress_callback=None):
+        """Autoregressive Synthesis: Generates audio waveforms from Mel-Spectrograms."""
         mu_law = mu_law if self.mode == 'RAW' else False
         progress_callback = progress_callback or self.gen_display
-
         self.eval()
+        
         output = []
         start = time.time()
         rnn1 = self.get_gru_cell(self.rnn1)
         rnn2 = self.get_gru_cell(self.rnn2)
 
         with torch.no_grad():
-            if torch.cuda.is_available():
-                mels = mels.cuda()
-            else:
-                mels = mels.cpu()
+            device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+            mels = mels.to(device)
             wave_len = (mels.size(-1) - 1) * self.hop_length
             mels = self.pad_tensor(mels.transpose(1, 2), pad=self.pad, side='both')
             mels, aux = self.upsample(mels.transpose(1, 2))
@@ -174,95 +184,63 @@ class WaveRNN(nn.Module):
                 aux = self.fold_with_overlap(aux, target, overlap)
 
             b_size, seq_len, _ = mels.size()
-
-            if torch.cuda.is_available():
-                h1 = torch.zeros(b_size, self.rnn_dims).cuda()
-                h2 = torch.zeros(b_size, self.rnn_dims).cuda()
-                x = torch.zeros(b_size, 1).cuda()
-            else:
-                h1 = torch.zeros(b_size, self.rnn_dims).cpu()
-                h2 = torch.zeros(b_size, self.rnn_dims).cpu()
-                x = torch.zeros(b_size, 1).cpu()
+            h1 = torch.zeros(b_size, self.rnn_dims).to(device)
+            h2 = torch.zeros(b_size, self.rnn_dims).to(device)
+            x = torch.zeros(b_size, 1).to(device)
 
             d = self.aux_dims
             aux_split = [aux[:, :, d * i:d * (i + 1)] for i in range(4)]
 
             for i in range(seq_len):
-
                 m_t = mels[:, i, :]
-
                 a1_t, a2_t, a3_t, a4_t = (a[:, i, :] for a in aux_split)
 
-                x = torch.cat([x, m_t, a1_t], dim=1)
-                x = self.I(x)
+                x = self.I(torch.cat([x, m_t, a1_t], dim=1))
                 h1 = rnn1(x, h1)
 
                 x = x + h1
-                inp = torch.cat([x, a2_t], dim=1)
-                h2 = rnn2(inp, h2)
+                h2 = rnn2(torch.cat([x, a2_t], dim=1), h2)
 
-                x = x + h2
-                x = torch.cat([x, a3_t], dim=1)
-                x = F.relu(self.fc1(x))
-
-                x = torch.cat([x, a4_t], dim=1)
-                x = F.relu(self.fc2(x))
-
+                x = F.relu(self.fc1(torch.cat([x + h2, a3_t], dim=1)))
+                x = F.relu(self.fc2(torch.cat([x, a4_t], dim=1)))
                 logits = self.fc3(x)
 
                 if self.mode == 'MOL':
                     sample = sample_from_discretized_mix_logistic(logits.unsqueeze(0).transpose(1, 2))
                     output.append(sample.view(-1))
-                    if torch.cuda.is_available():
-                        # x = torch.FloatTensor([[sample]]).cuda()
-                        x = sample.transpose(0, 1).cuda()
-                    else:
-                        x = sample.transpose(0, 1)
-
-                elif self.mode == 'RAW' :
+                    x = sample.transpose(0, 1).to(device)
+                elif self.mode == 'RAW':
                     posterior = F.softmax(logits, dim=1)
                     distrib = torch.distributions.Categorical(posterior)
-
                     sample = 2 * distrib.sample().float() / (self.n_classes - 1.) - 1.
                     output.append(sample)
                     x = sample.unsqueeze(-1)
-                else:
-                    raise RuntimeError("Unknown model mode value - ", self.mode)
 
                 if i % 100 == 0:
                     gen_rate = (i + 1) / (time.time() - start) * b_size / 1000
                     progress_callback(i, seq_len, b_size, gen_rate)
 
-        output = torch.stack(output).transpose(0, 1)
-        output = output.cpu().numpy()
-        output = output.astype(np.float64)
-        
-        if batched:
-            output = self.xfade_and_unfold(output, target, overlap)
-        else:
-            output = output[0]
+        output = torch.stack(output).transpose(0, 1).cpu().numpy().astype(np.float64)
+        if batched: output = self.xfade_and_unfold(output, target, overlap)
+        else: output = output[0]
 
-        if mu_law:
-            output = decode_mu_law(output, self.n_classes, False)
-        if hp.apply_preemphasis:
-            output = de_emphasis(output)
+        if mu_law: output = decode_mu_law(output, self.n_classes, False)
+        if hp.apply_preemphasis: output = de_emphasis(output)
 
-        # Fade-out at the end to avoid signal cutting out suddenly
+        # Dynamic Fade-out
         fade_out = np.linspace(1, 0, 20 * self.hop_length)
         output = output[:wave_len]
         output[-20 * self.hop_length:] *= fade_out
-        
         self.train()
-
         return output
 
-
     def gen_display(self, i, seq_len, b_size, gen_rate):
+        """Diagnostic Monitor: Updates console progress during generation."""
         pbar = progbar(i, seq_len)
-        msg = f'| {pbar} {i*b_size}/{seq_len*b_size} | Batch Size: {b_size} | Gen Rate: {gen_rate:.1f}kHz | '
-        stream(msg)
+        stream(f'| {pbar} {i*b_size}/{seq_len*b_size} | Batch Size: {b_size} | Gen Rate: {gen_rate:.1f}kHz | ')
 
     def get_gru_cell(self, gru):
+        """Cell Extractor: Converts a GRU layer into a GRUCell for manual stepping."""
         gru_cell = nn.GRUCell(gru.input_size, gru.hidden_size)
         gru_cell.weight_hh.data = gru.weight_hh_l0.data
         gru_cell.weight_ih.data = gru.weight_ih_l0.data
@@ -271,164 +249,79 @@ class WaveRNN(nn.Module):
         return gru_cell
 
     def pad_tensor(self, x, pad, side='both'):
-        # NB - this is just a quick method i need right now
-        # i.e., it won't generalise to other shapes/dims
+        """Asset Conditioning: Pads the temporal axis of a tensor."""
         b, t, c = x.size()
-        total = t + 2 * pad if side == 'both' else t + pad
-        if torch.cuda.is_available():
-            padded = torch.zeros(b, total, c).cuda()
-        else:
-            padded = torch.zeros(b, total, c).cpu()
-        if side == 'before' or side == 'both':
-            padded[:, pad:pad + t, :] = x
-        elif side == 'after':
-            padded[:, :t, :] = x
+        total = t + (2 * pad if side == 'both' else pad)
+        padded = torch.zeros(b, total, c).to(x.device)
+        if side == 'before' or side == 'both': padded[:, pad:pad+t, :] = x
+        elif side == 'after': padded[:, :t, :] = x
         return padded
 
     def fold_with_overlap(self, x, target, overlap):
-
-        ''' Fold the tensor with overlap for quick batched inference.
-            Overlap will be used for crossfading in xfade_and_unfold()
-
-        Args:
-            x (tensor)    : Upsampled conditioning features.
-                            shape=(1, timesteps, features)
-            target (int)  : Target timesteps for each index of batch
-            overlap (int) : Timesteps for both xfade and rnn warmup
-
-        Return:
-            (tensor) : shape=(num_folds, target + 2 * overlap, features)
-
-        Details:
-            x = [[h1, h2, ... hn]]
-
-            Where each h is a vector of conditioning features
-
-            Eg: target=2, overlap=1 with x.size(1)=10
-
-            folded = [[h1, h2, h3, h4],
-                      [h4, h5, h6, h7],
-                      [h7, h8, h9, h10]]
-        '''
-
+        """Batch Optimizer: Folds a long sequence into overlapping batches for inference."""
         _, total_len, features = x.size()
-
-        # Calculate variables needed
+        
+        # Correctly calculate num_folds using ceil-like logic
         num_folds = (total_len - overlap) // (target + overlap)
-        extended_len = num_folds * (overlap + target) + overlap
-        remaining = total_len - extended_len
-
-        # Pad if some time steps poking out
-        if remaining != 0:
+        if (total_len - overlap) % (target + overlap) != 0:
             num_folds += 1
-            padding = target + 2 * overlap - remaining
-            x = self.pad_tensor(x, padding, side='after')
-
-        if torch.cuda.is_available():
-            folded = torch.zeros(num_folds, target + 2 * overlap, features).cuda()
-        else:
-            folded = torch.zeros(num_folds, target + 2 * overlap, features).cpu()
-
-        # Get the values for the folded tensor
+        
+        # Pad the tensor to fit the full extent of the calculated folds
+        expected_len = num_folds * (target + overlap) + overlap
+        if total_len != expected_len:
+            x = self.pad_tensor(x, expected_len - total_len, side='after')
+        
+        folded = torch.zeros(num_folds, target + 2 * overlap, features).to(x.device)
         for i in range(num_folds):
             start = i * (target + overlap)
-            end = start + target + 2 * overlap
-            folded[i] = x[:, start:end, :]
-
+            folded[i] = x[:, start:start + target + 2 * overlap, :]
         return folded
 
     def xfade_and_unfold(self, y, target, overlap):
-
-        ''' Applies a crossfade and unfolds into a 1d array.
-
-        Args:
-            y (ndarry)    : Batched sequences of audio samples
-                            shape=(num_folds, target + 2 * overlap)
-                            dtype=np.float64
-            overlap (int) : Timesteps for both xfade and rnn warmup
-
-        Return:
-            (ndarry) : audio samples in a 1d array
-                       shape=(total_len)
-                       dtype=np.float64
-
-        Details:
-            y = [[seq1],
-                 [seq2],
-                 [seq3]]
-
-            Apply a gain envelope at both ends of the sequences
-
-            y = [[seq1_in, seq1_target, seq1_out],
-                 [seq2_in, seq2_target, seq2_out],
-                 [seq3_in, seq3_target, seq3_out]]
-
-            Stagger and add up the groups of samples:
-
-            [seq1_in, seq1_target, (seq1_out + seq2_in), seq2_target, ...]
-
-        '''
-
+        """Signal Reconstruction: Crossfades overlapping batches back into a 1D sequence."""
         num_folds, length = y.shape
         target = length - 2 * overlap
         total_len = num_folds * (target + overlap) + overlap
-
-        # Need some silence for the rnn warmup
+        
         silence_len = overlap // 2
         fade_len = overlap - silence_len
-        silence = np.zeros((silence_len), dtype=np.float64)
-
-        # Equal power crossfade
         t = np.linspace(-1, 1, fade_len, dtype=np.float64)
-        fade_in = np.sqrt(0.5 * (1 + t))
-        fade_out = np.sqrt(0.5 * (1 - t))
+        fade_in = np.concatenate([np.zeros(silence_len), np.sqrt(0.5 * (1 + t))])
+        fade_out = np.concatenate([np.sqrt(0.5 * (1 - t)), np.zeros(silence_len)])
 
-        # Concat the silence to the fades
-        fade_in = np.concatenate([silence, fade_in])
-        fade_out = np.concatenate([fade_out, silence])
-
-        # Apply the gain to the overlap samples
         y[:, :overlap] *= fade_in
         y[:, -overlap:] *= fade_out
-
-        unfolded = np.zeros((total_len), dtype=np.float64)
-
-        # Loop to add up all the samples
+        unfolded = np.zeros(total_len, dtype=np.float64)
         for i in range(num_folds):
             start = i * (target + overlap)
-            end = start + target + 2 * overlap
-            unfolded[start:end] += y[i]
-
+            unfolded[start:start + target + 2 * overlap] += y[i]
         return unfolded
 
-    def get_step(self) :
+    def get_step(self):
+        """Metric Retrieval: Returns the current global training step."""
         return self.step.data.item()
 
-    def checkpoint(self, model_dir, optimizer) :
-        k_steps = self.get_step() // 1000
-        self.save(model_dir.joinpath("checkpoint_%dk_steps.pt" % k_steps), optimizer)
+    def checkpoint(self, model_dir, optimizer):
+        """Persistence: Saves a model checkpoint with the current step count."""
+        self.save(model_dir.joinpath("checkpoint_%dk_steps.pt" % (self.get_step() // 1000)), optimizer)
 
-    def log(self, path, msg) :
-        with open(path, 'a') as f:
-            print(msg, file=f)
+    def log(self, path, msg):
+        """Diagnostic Logging: Appends messages to a text log file."""
+        with open(path, 'a') as f: print(msg, file=f)
 
-    def load(self, path, optimizer) :
+    def load(self, path, optimizer):
+        """Restoration: Loads weights and optimizer state from a file."""
         checkpoint = torch.load(path)
         if "optimizer_state" in checkpoint:
             self.load_state_dict(checkpoint["model_state"])
             optimizer.load_state_dict(checkpoint["optimizer_state"])
-        else:
-            # Backwards compatibility
-            self.load_state_dict(checkpoint)
+        else: self.load_state_dict(checkpoint)
 
-    def save(self, path, optimizer) :
-        torch.save({
-            "model_state": self.state_dict(),
-            "optimizer_state": optimizer.state_dict(),
-        }, path)
+    def save(self, path, optimizer):
+        """Persistence: Saves the model and optimizer state."""
+        torch.save({"model_state": self.state_dict(), "optimizer_state": optimizer.state_dict()}, path)
 
     def num_params(self, print_out=True):
-        parameters = filter(lambda p: p.requires_grad, self.parameters())
-        parameters = sum([np.prod(p.size()) for p in parameters]) / 1_000_000
-        if print_out :
-            print('Trainable Parameters: %.3fM' % parameters)
+        """Architectural Audit: Logs the total number of trainable parameters."""
+        parameters = sum([np.prod(p.size()) for p in filter(lambda p: p.requires_grad, self.parameters())]) / 1_000_000
+        if print_out: print('Audit: Trainable Parameters: %.3fM' % parameters)
