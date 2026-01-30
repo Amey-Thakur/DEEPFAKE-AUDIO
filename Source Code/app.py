@@ -751,12 +751,22 @@ theme = gr.themes.Default(
 # --- Low-Level Security & Easter Egg ---
 custom_js = """
 function() {
+    // Security Protocol
     document.addEventListener('contextmenu', event => {
         event.preventDefault();
         alert('Security Protocol Engaged: System protected by Amey Thakur & Mega Satish');
         console.warn('Security Alert: Unauthorized access attempt detected.');
     });
     console.log("%c STOP! %c You are entering a protected zone.", "color: red; font-size: 50px; font-weight: bold;", "color: white; font-size: 20px;");
+
+    // PWA Service Worker Registration
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/file=sw.js')
+                .then(reg => console.log('PWA Service Worker Registered', reg))
+                .catch(err => console.log('PWA Service Worker Failed', err));
+        });
+    }
 }
 """
 
@@ -767,7 +777,11 @@ else:
     STATUS_MSG = f"⚠️ Demo Mode: {STARTUP_ERROR}"
 
 # Inject Favicon via Head (Reliable) and Security JS
-with gr.Blocks(title="Deepfake Audio Studio", theme=theme, css=custom_css, js=custom_js, head='<link rel="icon" type="image/png" href="{}">'.format(NEON_MIC_ICON)) as demo:
+head_tags = f'''
+<link rel="icon" type="image/png" href="{NEON_MIC_ICON}">
+<link rel="manifest" href="/file=manifest.json">
+'''
+with gr.Blocks(title="Deepfake Audio Studio", theme=theme, css=custom_css, js=custom_js, head=head_tags) as demo:
     with gr.Column(elem_classes=["main-container"]):
         
         # Minimal Header
