@@ -53,6 +53,10 @@
 
 **Deepfake Audio** is a multi-stage neural voice synthesis architecture designed to clone speaker identities and generate high-fidelity speech from textual input. By implementing the **SV2TTS** framework, this project translates skeletal vocal characteristics into a latent embedding, which then conditions a generative model to produce new vocalizations with strikingly natural prosody and timbre.
 
+> [!IMPORTANT]
+> ### 👩‍🔬 Attribution
+> This project builds upon the foundational research and implementation of the **[Real-Time-Voice-Cloning](https://github.com/CorentinJ/Real-Time-Voice-Cloning)** repository by **[Corentin Jemine](https://github.com/CorentinJ)**.
+
 > [!NOTE]
 > ### 🎙️ Defining Audio Deepfakes
 > An **audio deepfake** is when a “cloned” voice that is potentially indistinguishable from the real person’s is used to produce synthetic audio. This process involves utilizing advanced neural architectures, such as the **SV2TTS** framework, to distillate high-dimensional vocal identities into latent embeddings. These embeddings then condition a generative model to synthesize new speech that mirrors the original speaker's prosody, timbre, and acoustic nuances with striking fidelity.
