@@ -143,6 +143,7 @@ DEEPFAKE-AUDIO/
 ├── .gitattributes                   # Signal Normalization
 ├── .gitignore                       # Deployment Exclusions
 ├── DEEPFAKE-AUDIO.ipynb             # Research Notebook
+├── DEEPFAKE-AUDIO.py                # Research Script (Standalone CLI)
 ├── SECURITY.md                      # Security Protocols
 ├── CITATION.cff                     # Academic Citation Manifest
 ├── codemeta.json                    # Metadata Standard
