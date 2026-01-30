@@ -1,71 +1,95 @@
+# ==================================================================================================
+# DEEPFAKE AUDIO - encoder_preprocess.py (Acoustic Feature Extraction)
+# ==================================================================================================
+# 
+# 📝 DESCRIPTION
+# This script serves as the primary data ingestion layer for the Speaker Encoder. It 
+# processes raw waveforms from massive speech datasets (LibriSpeech, VoxCeleb) and extracts 
+# high-dimensional Mel-Spectrogram features. These features are essentially "voice prints" 
+# that allow the encoder to learn speaker-independent embedding representations.
+#
+# 👤 AUTHORS
+# - Amey Thakur (https://github.com/Amey-Thakur)
+# - Mega Satish (https://github.com/msatmod)
+#
+# 🤝🏻 CREDITS
+# Original Real-Time Voice Cloning methodology by CorentinJ
+# Repository: https://github.com/CorentinJ/Real-Time-Voice-Cloning
+#
+# 🔗 PROJECT LINKS
+# Repository: https://github.com/Amey-Thakur/DEEPFAKE-AUDIO
+# Video Demo: https://youtu.be/i3wnBcbHDbs
+# Research: https://github.com/Amey-Thakur/DEEPFAKE-AUDIO/blob/main/DEEPFAKE-AUDIO.ipynb
+#
+# 📜 LICENSE
+# Released under the MIT License
+# Release Date: 2021-02-06
+# ==================================================================================================
+
 from encoder.preprocess import preprocess_librispeech, preprocess_voxceleb1, preprocess_voxceleb2
 from utils.argutils import print_args
 from pathlib import Path
 import argparse
 
-
 if __name__ == "__main__":
+    # --- INTERFACE CONFIGURATION ---
     class MyFormatter(argparse.ArgumentDefaultsHelpFormatter, argparse.RawDescriptionHelpFormatter):
+        """Custom formatter to preserve formatting in the help description."""
         pass
 
     parser = argparse.ArgumentParser(
-        description="Preprocesses audio files from datasets, encodes them as mel spectrograms and "
-                    "writes them to the disk. This will allow you to train the encoder. The "
-                    "datasets required are at least one of VoxCeleb1, VoxCeleb2 and LibriSpeech. "
-                    "Ideally, you should have all three. You should extract them as they are "
-                    "after having downloaded them and put them in a same directory, e.g.:\n"
-                    "-[datasets_root]\n"
-                    "  -LibriSpeech\n"
-                    "    -train-other-500\n"
-                    "  -VoxCeleb1\n"
-                    "    -wav\n"
-                    "    -vox1_meta.csv\n"
-                    "  -VoxCeleb2\n"
-                    "    -dev",
+        description="Acoustic Pre-processor: Normalizes raw datasets into mel-spectrogram arrays.\n"
+                    "Required datasets: LibriSpeech, VoxCeleb1, or VoxCeleb2.",
         formatter_class=MyFormatter
     )
-    parser.add_argument("datasets_root", type=Path, help=\
-        "Path to the directory containing your LibriSpeech/TTS and VoxCeleb datasets.")
-    parser.add_argument("-o", "--out_dir", type=Path, default=argparse.SUPPRESS, help=\
-        "Path to the output directory that will contain the mel spectrograms. If left out, "
-        "defaults to <datasets_root>/SV2TTS/encoder/")
+    
+    # --- PATH DEFINITIONS ---
+    parser.add_argument("datasets_root", type=Path, 
+                        help="Root directory where raw datasets are extracted.")
+    parser.add_argument("-o", "--out_dir", type=Path, default=argparse.SUPPRESS, 
+                        help="Destination for processed neural features. Defaults to <datasets_root>/SV2TTS/encoder/")
+    
+    # --- PROCESSING PARAMETERS ---
     parser.add_argument("-d", "--datasets", type=str,
-                        default="librispeech_other,voxceleb1,voxceleb2", help=\
-        "Comma-separated list of the name of the datasets you want to preprocess. Only the train "
-        "set of these datasets will be used. Possible names: librispeech_other, voxceleb1, "
-        "voxceleb2.")
-    parser.add_argument("-s", "--skip_existing", action="store_true", help=\
-        "Whether to skip existing output files with the same name. Useful if this script was "
-        "interrupted.")
-    parser.add_argument("--no_trim", action="store_true", help=\
-        "Preprocess audio without trimming silences (not recommended).")
+                        default="librispeech_other,voxceleb1,voxceleb2", 
+                        help="Comma-separated identifiers of datasets to include in the pipeline.")
+    parser.add_argument("-s", "--skip_existing", action="store_true", 
+                        help="Optimize by skipping files that have already been materialized on disk.")
+    parser.add_argument("--no_trim", action="store_true", 
+                        help="Inhibit silent period removal (Voice Activity Detection). Not recommended for high-fidelity training.")
+    
     args = parser.parse_args()
 
-    # Verify webrtcvad is available
-    if not args.no_trim:
+    # --- HARDWARE & VAD VALIDATION ---
+    # We verify the presence of 'webrtcvad' as it is critical for ensuring non-silent training samples.
+    if not hasattr(args, "no_trim") or not args.no_trim:
         try:
             import webrtcvad
         except:
-            raise ModuleNotFoundError("Package 'webrtcvad' not found. This package enables "
-                "noise removal and is recommended. Please install and try again. If installation fails, "
-                "use --no_trim to disable this error message.")
-    del args.no_trim
+            print("⚠️ Scholarly Warning: 'webrtcvad' not detected. This is required for speech silence removal.")
+            raise ModuleNotFoundError("Please install 'webrtcvad' or use --no_trim for a degraded run.")
 
-    # Process the arguments
+    # --- ARCHITECTURAL ORCHESTRATION ---
     args.datasets = args.datasets.split(",")
     if not hasattr(args, "out_dir"):
         args.out_dir = args.datasets_root.joinpath("SV2TTS", "encoder")
-    assert args.datasets_root.exists()
+    
+    assert args.datasets_root.exists(), "Fatal: datasets_root not found. 🤝🏻 Ensure pathing."
     args.out_dir.mkdir(exist_ok=True, parents=True)
 
-    # Preprocess the datasets
+    # --- EXECUTION ---
     print_args(args, parser)
+    print("🤝🏻 Scholarly Partnership: Amey Thakur & Mega Satish")
+    
     preprocess_func = {
         "librispeech_other": preprocess_librispeech,
         "voxceleb1": preprocess_voxceleb1,
         "voxceleb2": preprocess_voxceleb2,
     }
-    args = vars(args)
-    for dataset in args.pop("datasets"):
-        print("Preprocessing %s" % dataset)
-        preprocess_func[dataset](**args)
+    
+    args_dict = vars(args)
+    datasets_to_process = args_dict.pop("datasets")
+    
+    for dataset in datasets_to_process:
+        print("\n🚀 Initiating Neural Feature Extraction for: %s" % dataset)
+        preprocess_func[dataset](**args_dict)

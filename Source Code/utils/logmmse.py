@@ -1,29 +1,31 @@
+# ==================================================================================================
+# DEEPFAKE AUDIO - utils/logmmse.py (Acoustic Signal Denoising)
+# ==================================================================================================
+# 
+# 📝 DESCRIPTION
+# This module implements the Log-Minimum Mean Square Error (Log-MMSE) algorithm for 
+# suppression of additive noise in speech signals. It is primarily used for cleaner 
+# reference voice ingestion and post-synthesis waveform refinement, ensuring 
+# high-fidelity audio cloning even in non-ideal recording conditions.
+#
+# 👤 AUTHORS (Integration & Refactoring)
+# - Amey Thakur (https://github.com/Amey-Thakur)
+# - Mega Satish (https://github.com/msatmod)
+#
+# 🤝🏻 CREDITS
+# Original Log-MMSE implementation from 'logmmse' package.
+# Source: https://pypi.org/project/logmmse/
+#
+# 🔗 PROJECT LINKS
+# Repository: https://github.com/Amey-Thakur/DEEPFAKE-AUDIO
+# Video Demo: https://youtu.be/i3wnBcbHDbs
+# Research: https://github.com/Amey-Thakur/DEEPFAKE-AUDIO/blob/main/DEEPFAKE-AUDIO.ipynb
+#
+# 📜 LICENSE (Original)
 # The MIT License (MIT)
-# 
 # Copyright (c) 2015 braindead
-# 
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-# 
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
-# 
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE.
-#
-#
-# This code was extracted from the logmmse package (https://pypi.org/project/logmmse/) and I
-# simply modified the interface to meet my needs.
-
+# Original Code extracted from logmmse package and modified for integration.
+# ==================================================================================================
 
 import numpy as np
 import math

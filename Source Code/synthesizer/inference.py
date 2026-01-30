@@ -1,3 +1,31 @@
+# ==================================================================================================
+# DEEPFAKE AUDIO - synthesizer/inference.py (Acoustic Distillation Engine)
+# ==================================================================================================
+# 
+# 📝 DESCRIPTION
+# This module implements the Synthesizer class, which orchestrates the loading 
+# and inference of the Tacotron model. it converts textual sequences and speaker 
+# embeddings (identity vectors) into high-resolution Mel-Spectrograms, enabling 
+# zero-shot multispeaker voice synthesis.
+#
+# 👤 AUTHORS
+# - Amey Thakur (https://github.com/Amey-Thakur)
+# - Mega Satish (https://github.com/msatmod)
+#
+# 🤝🏻 CREDITS
+# Original Real-Time Voice Cloning methodology by CorentinJ
+# Repository: https://github.com/CorentinJ/Real-Time-Voice-Cloning
+#
+# 🔗 PROJECT LINKS
+# Repository: https://github.com/Amey-Thakur/DEEPFAKE-AUDIO
+# Video Demo: https://youtu.be/i3wnBcbHDbs
+# Research: https://github.com/Amey-Thakur/DEEPFAKE-AUDIO/blob/main/DEEPFAKE-AUDIO.ipynb
+#
+# 📜 LICENSE
+# Released under the MIT License
+# Release Date: 2021-02-06
+# ==================================================================================================
+
 import torch
 from synthesizer import audio
 from synthesizer.hparams import hparams
@@ -10,42 +38,41 @@ from typing import Union, List
 import numpy as np
 import librosa
 
-
 class Synthesizer:
+    """
+    Neural Voice Orchestrator:
+    Manages the lifecycle of the Tacotron model and provides high-level APIs 
+    for text-to-spectrogram synthesis.
+    """
     sample_rate = hparams.sample_rate
     hparams = hparams
 
     def __init__(self, model_fpath: Path, verbose=True):
         """
-        The model isn't instantiated and loaded in memory until needed or until load() is called.
-
-        :param model_fpath: path to the trained model file
-        :param verbose: if False, prints less information when using the model
+        Lazy Initialization:
+        The model remains un-instantiated until the first synthesis request or 
+        explicit load() call to conserve memory.
         """
         self.model_fpath = model_fpath
         self.verbose = verbose
 
-        # Check for GPU
+        # Hardware Auto-detection
         if torch.cuda.is_available():
             self.device = torch.device("cuda")
         else:
             self.device = torch.device("cpu")
+        
         if self.verbose:
             print("Synthesizer using device:", self.device)
 
-        # Tacotron model will be instantiated later on first use.
         self._model = None
 
     def is_loaded(self):
-        """
-        Whether the model is loaded in memory.
-        """
+        """Verifies if the neural weights are resident in memory."""
         return self._model is not None
 
     def load(self):
-        """
-        Instantiates and loads the model given the weights file that was passed in the constructor.
-        """
+        """Materializes the Tacotron architecture and loads pre-trained checkpoints."""
         self._model = Tacotron(embed_dims=hparams.tts_embed_dims,
                                num_chars=len(symbols),
                                encoder_dims=hparams.tts_encoder_dims,
@@ -65,32 +92,25 @@ class Synthesizer:
         self._model.eval()
 
         if self.verbose:
-            print("Loaded synthesizer \"%s\" trained to step %d" % (self.model_fpath.name, self._model.state_dict()["step"]))
+            print("Loaded synthesizer \"%s\" trained to step %d" % 
+                  (self.model_fpath.name, self._model.state_dict()["step"]))
 
     def synthesize_spectrograms(self, texts: List[str],
                                 embeddings: Union[np.ndarray, List[np.ndarray]],
                                 return_alignments=False):
         """
-        Synthesizes mel spectrograms from texts and speaker embeddings.
-
-        :param texts: a list of N text prompts to be synthesized
-        :param embeddings: a numpy array or list of speaker embeddings of shape (N, 256)
-        :param return_alignments: if True, a matrix representing the alignments between the
-        characters
-        and each decoder output step will be returned for each spectrogram
-        :return: a list of N melspectrograms as numpy arrays of shape (80, Mi), where Mi is the
-        sequence length of spectrogram i, and possibly the alignments.
+        Batch Inference:
+        Converts a list of texts and identity embeddings into Mel-Spectrograms.
         """
-        # Load the model on the first request.
         if not self.is_loaded():
             self.load()
 
-        # Preprocess text inputs
+        # Text-to-Phoneme Preprocessing
         inputs = [text_to_sequence(text.strip(), hparams.tts_cleaner_names) for text in texts]
         if not isinstance(embeddings, list):
             embeddings = [embeddings]
 
-        # Batch inputs
+        # Batch Orchestration
         batched_inputs = [inputs[i:i+hparams.synthesis_batch_size]
                              for i in range(0, len(inputs), hparams.synthesis_batch_size)]
         batched_embeds = [embeddings[i:i+hparams.synthesis_batch_size]
@@ -101,24 +121,25 @@ class Synthesizer:
             if self.verbose:
                 print(f"\n| Generating {i}/{len(batched_inputs)}")
 
-            # Pad texts so they are all the same length
+            # Temporal Padding for batch consistency
             text_lens = [len(text) for text in batch]
             max_text_len = max(text_lens)
             chars = [pad1d(text, max_text_len) for text in batch]
             chars = np.stack(chars)
 
-            # Stack speaker embeddings into 2D array for batch processing
+            # Identity Vector Aggregation
             speaker_embeds = np.stack(batched_embeds[i-1])
 
-            # Convert to tensor
+            # Tensor Conversion
             chars = torch.tensor(chars).long().to(self.device)
             speaker_embeddings = torch.tensor(speaker_embeds).float().to(self.device)
 
-            # Inference
+            # Neural Forward Pass
             _, mels, alignments = self._model.generate(chars, speaker_embeddings)
             mels = mels.detach().cpu().numpy()
+            
             for m in mels:
-                # Trim silence from end of each spectrogram
+                # Stochastic Silence Trimming: Removes tail-end artifacts
                 while np.max(m[:, -1]) < hparams.tts_stop_threshold:
                     m = m[:, :-1]
                 specs.append(m)
@@ -129,10 +150,7 @@ class Synthesizer:
 
     @staticmethod
     def load_preprocess_wav(fpath):
-        """
-        Loads and preprocesses an audio file under the same conditions the audio files were used to
-        train the synthesizer.
-        """
+        """Standardized Audio Ingestion: Loads and rescales audio for synthesis consistency."""
         wav = librosa.load(str(fpath), hparams.sample_rate)[0]
         if hparams.rescale:
             wav = wav / np.abs(wav).max() * hparams.rescaling_max
@@ -140,10 +158,7 @@ class Synthesizer:
 
     @staticmethod
     def make_spectrogram(fpath_or_wav: Union[str, Path, np.ndarray]):
-        """
-        Creates a mel spectrogram from an audio file in the same manner as the mel spectrograms that
-        were fed to the synthesizer when training.
-        """
+        """Acoustic Transformation: Generates a Mel-Spectrogram from audio input."""
         if isinstance(fpath_or_wav, str) or isinstance(fpath_or_wav, Path):
             wav = Synthesizer.load_preprocess_wav(fpath_or_wav)
         else:
@@ -154,12 +169,9 @@ class Synthesizer:
 
     @staticmethod
     def griffin_lim(mel):
-        """
-        Inverts a mel spectrogram using Griffin-Lim. The mel spectrogram is expected to have been built
-        with the same parameters present in hparams.py.
-        """
+        """Acoustic Reconstruction: Approximates waveform from Mel space via Griffin-Lim."""
         return audio.inv_mel_spectrogram(mel, hparams)
 
-
 def pad1d(x, max_len, pad_value=0):
+    """Utility for 1D sequence padding."""
     return np.pad(x, (0, max_len - len(x)), mode="constant", constant_values=pad_value)
