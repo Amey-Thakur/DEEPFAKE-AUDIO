@@ -232,9 +232,9 @@ DEEPFAKE-AUDIO/
 - **Git**: For version control and cloning. [Download Git](https://git-scm.com/downloads)
 
 > [!WARNING]
-> **Neural Model Acquisition**
+> ### Neural Model Acquisition
 >
-> The synthesis engine relies on pre-trained neural models. Ensure you have the weights placed in their respective `saved_models` directories for the Encoder, Synthesizer, and Vocoder. Failure to synchronize these assets will result in initialization errors.
+> The synthesis engine relies on pre-trained neural models. Ensure you have the weights (`encoder.pt`, `synthesizer.pt`, `vocoder.pt`) placed in the `Dataset/` directory. Failure to synchronize these assets will result in initialization errors.
 
 ### 2. Installation & Setup
 
