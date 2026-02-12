@@ -355,5 +355,3 @@ Special thanks to [**Corentin Jemine**](https://github.com/CorentinJ) for the fo
   *Semester-wise curriculum, laboratories, projects, and academic notes.*
 
 </div>
-
-
