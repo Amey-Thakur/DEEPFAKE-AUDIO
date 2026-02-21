@@ -286,6 +286,14 @@ python DEEPFAKE-AUDIO.py --preset "Steve Jobs.wav" --text "Neural cloning active
 python DEEPFAKE-AUDIO.py --input "my_voice.wav" --text "Synthesizing new speech."
 ```
 
+> [!IMPORTANT]
+> ### Deepfake Audio | Cloud Research Laboratory
+>
+> Execute the complete **Neural Voice Synthesis Research** directly in the cloud. This interactive **Google Colab Notebook** provides a zero-setup environment for orchestrating high-fidelity speaker identity transfers, offering a scholarly gateway to the underlying Python-based multispeaker synthesis architecture.
+>
+> [Launch Deepfake Audio Studio on Google Colab](https://colab.research.google.com/github/Amey-Thakur/DEEPFAKE-AUDIO/blob/main/DEEPFAKE-AUDIO.ipynb)
+
+
 ---
 
 <!-- USAGE GUIDELINES -->
