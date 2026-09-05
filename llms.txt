@@ -1,0 +1,36 @@
+# Deepfake Audio
+
+> 🎙️ Deepfake Audio – A neural voice cloning studio powered by SV2TTS
+> technology.
+
+Author: Amey Thakur, ORCID 0000-0001-5644-1575
+Co-author: Mega Satish, ORCID 0000-0002-1844-9557
+Institution: Terna Engineering College, University of Mumbai
+Programme: B.E. Computer Engineering
+Licence: CC BY 4.0, attribution required
+Repository created: 6 February 2021
+
+## What is in this repository
+
+- Dataset, 17 files
+- Mega, 6 files
+- Source Code, 89 files
+- docs, 1 file
+- screenshots, 9 files
+- DEEPFAKE-AUDIO.ipynb
+- DEEPFAKE-AUDIO.py
+
+## Subject terms
+
+artificial-intelligence, audio, deepfake, deepfake-audio,
+deepfake-generation, deepfake-voices, deepfakes, neural-voice-synthesis,
+sv2tts, tacotron-2, text-to-speech, text-to-speech-app, voice-cloning,
+voice-cloning-app, zero-shot-voice-cloning
+
+## Where this sits
+
+- This repository: https://github.com/Amey-Thakur/DEEPFAKE-AUDIO
+- Degree index, every subject and project: https://github.com/Amey-Thakur/COMPUTER-ENGINEERING
+- Project page: https://huggingface.co/spaces/ameythakur/Deepfake-Audio
+- Author: https://github.com/Amey-Thakur
+- Research notes and reflections: https://amey-thakur.github.io/
